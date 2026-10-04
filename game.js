@@ -1,246 +1,160 @@
-/* Nexus Number V5 — self-contained client logic.
-   All generated numbers are fictional in-game combinations, not real phone subscriptions. */
+/* Nexus Number V7 client. Fictional in-game mobile-number collectibles. */
 (function(){
 'use strict';
-window.NEXUS_NUMBER_BOOTED = false;
-
-const API_BASE = String(window.NEXUS_NUMBER_API || localStorage.getItem('nexus_api') || '').replace(/\/$/,'');
-const STORAGE_KEY='nexus_number_v5_state';
-const DB_NAME='nexus-number-v5';
-const STORE='used_numbers';
-
+window.NEXUS_NUMBER_BOOTED=false;
+const API_BASE=String(window.NEXUS_NUMBER_API||'https://nexus-number-api.longyxs999.workers.dev').replace(/\/$/,'');
+const STATE_KEY='nexus_number_v7';
 const DROP_TABLE=[
-  {key:'common',label:'Обычный',pct:92,oneIn:'1.09 к 1',min:500,max:10000},
-  {key:'uncommon',label:'Необычный',pct:6,oneIn:'1 к 17',min:10000,max:75000},
-  {key:'rare',label:'Редкий',pct:1.7,oneIn:'1 к 59',min:75000,max:500000},
-  {key:'epic',label:'Эпический',pct:.25,oneIn:'1 к 400',min:500000,max:2500000},
-  {key:'legendary',label:'Легендарный',pct:.049,oneIn:'1 к 2 041',min:2500000,max:12000000},
-  {key:'mythic',label:'Мифический',pct:.001,oneIn:'1 к 100 000',min:12000000,max:49900000}
+ {key:'common',label:'Обычный',pct:65,oneIn:'1 к 1,54'},
+ {key:'uncommon',label:'Необычный',pct:20,oneIn:'1 к 5'},
+ {key:'rare',label:'Редкий',pct:10,oneIn:'1 к 10'},
+ {key:'epic',label:'Эпический',pct:4,oneIn:'1 к 25'},
+ {key:'legendary',label:'Легендарный',pct:.9,oneIn:'1 к 111'},
+ {key:'mythic',label:'Мифический',pct:.1,oneIn:'1 к 1 000'}
 ];
-const TYPE_LABELS={
-  random:'Случайная',pair:'Двойная пара',triple:'Тройка',quad:'Четвёрка',quint:'Пятёрка',sext:'Шестёрка',sept:'Семёрка',
-  mirror:'Зеркало',half:'Двойной блок',alternate:'Чередование',stairs:'Лестница',stairsWide:'Длинная лестница',
-  lucky777:'Lucky 777',lucky000:'Lucky 000',lucky123:'123-пульс',all:'Полный дубль',palindrome:'Палиндром',blocks:'Блоки'
-};
-const TYPE_WEIGHTS={
-  common:[['random',72],['pair',16],['triple',7],['blocks',5]],
-  uncommon:[['pair',35],['triple',27],['alternate',16],['stairs',12],['lucky123',10]],
-  rare:[['triple',22],['quad',16],['alternate',15],['stairs',14],['lucky777',13],['lucky000',8],['blocks',7],['mirror',5]],
-  epic:[['quad',20],['quint',18],['mirror',19],['half',15],['stairsWide',15],['alternate',8],['lucky777',5]],
-  legendary:[['quint',20],['sext',15],['mirror',21],['half',18],['stairsWide',18],['palindrome',8]],
-  mythic:[['all',28],['sept',18],['sext',20],['mirror',16],['half',10],['stairsWide',5],['lucky777',3]]
-};
-const DEMO_LEADERS=[
- ['NEXUS_01',49900000,'+7 999 999 99 99','Мифический'],
- ['NUMBERKING',31750000,'+7 977 777 77 77','Мифический'],
- ['DIGIT LORD',12400000,'+7 988 888 88 88','Легендарный'],
- ['ARCTIC',7300000,'+7 900 123 12 12','Легендарный'],
- ['PHONE X',2900000,'+7 911 111 22 33','Эпический'],
- ['R9',740000,'+7 999 777 12 34','Редкий'],
- ['NOVA',188000,'+7 922 555 66 77','Редкий'],
- ['LIME',76000,'+7 933 123 45 67','Необычный']
-];
-
-let state=loadState();
-let current=state.current||null;
-let page='generator';
-let rolling=false;
-let usedCache=new Set(state.recentUsed||[]);
-let dbPromise=null;
-
-function loadState(){
-  const base={attempts:0,best:0,history:[],rareCounts:{common:0,uncommon:0,rare:0,epic:0,legendary:0,mythic:0},sound:true,theme:'dark',nick:'Игрок',playerId:(crypto.randomUUID?crypto.randomUUID():String(Date.now())+Math.random()),current:null,recentUsed:[]};
-  try{return Object.assign(base,JSON.parse(localStorage.getItem(STORAGE_KEY)||'null')||{});}catch{return base;}
+const DEFAULT_STATE={auth:null,me:null,current:null,attempts:0,best:0,history:[],serverInventory:[],rareCounts:{common:0,uncommon:0,rare:0,epic:0,legendary:0,mythic:0},sound:true,theme:'dark',adminData:null};
+let state=loadState(),current=state.current||null,page='generator',rolling=false,feedTimer=null,onlineTimer=null;
+function loadState(){try{return Object.assign({},DEFAULT_STATE,JSON.parse(localStorage.getItem(STATE_KEY)||'{}'));}catch{return {...DEFAULT_STATE}}}
+function save(){try{localStorage.setItem(STATE_KEY,JSON.stringify(state));}catch{}}
+function esc(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]))}
+function money(n){return Number(n||0).toLocaleString('ru-RU')+' ₽'}
+function fmt(d){return '+7 '+d.slice(0,3).join('')+' '+d.slice(3,6).join('')+' '+d.slice(6,8).join('')+' '+d.slice(8,10).join('')}
+async function api(path,opts={}){
+ const headers={'content-type':'application/json',...(opts.headers||{})};
+ if(state.auth)headers.authorization='Bearer '+state.auth;
+ const r=await fetch(API_BASE+path,{...opts,headers});
+ const data=await r.json().catch(()=>({}));
+ if(!r.ok||data.ok===false)throw new Error(data.error||'API_ERROR');
+ return data;
 }
-function save(){try{state.recentUsed=Array.from(usedCache).slice(-2500);localStorage.setItem(STORAGE_KEY,JSON.stringify(state));}catch{}}
-function esc(x){return String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[c]));}
-function money(n){return Number(n||0).toLocaleString('ru-RU')+' ₽';}
-function rand(n=1){return Math.floor(Math.random()*n);}
-function pickWeighted(list){let total=list.reduce((a,x)=>a+x[1],0),r=Math.random()*total;for(const [v,w] of list){r-=w;if(r<0)return v}return list[list.length-1][0];}
-function pickDrop(){let r=Math.random()*100,acc=0;for(const x of DROP_TABLE){acc+=x.pct;if(r<acc)return x}return DROP_TABLE[0];}
-function randomDigits(){return [9,...Array.from({length:9},()=>rand(10))];}
-function digitsFrom(arr){return arr.map(Number).slice(0,10);}
-function fmt(d){return '+7 '+d.slice(0,3).join('')+' '+d.slice(3,6).join('')+' '+d.slice(6,8).join('')+' '+d.slice(8,10).join('');}
-function uniqueDigits(){return Array.from(new Set(randomDigits())).length;}
-function makeByType(type){
-  const r=()=>rand(10), d=randomDigits();
-  if(type==='random')return d;
-  if(type==='pair'){const a=r(),b=r(),c=r();return [9,a,a,b,b,c,c,r(),r(),r()];}
-  if(type==='triple'){const a=r();let x=[9,a,a,a,r(),r(),r(),r(),r(),r()];return x;}
-  if(type==='quad'){const a=r();return [9,a,a,a,a,r(),r(),r(),r(),r()];}
-  if(type==='quint'){const a=r();return [9,a,a,a,a,a,r(),r(),r(),r()];}
-  if(type==='sext'){const a=r();return [9,a,a,a,a,a,a,r(),r(),r()];}
-  if(type==='sept'){const a=r();return [9,a,a,a,a,a,a,a,r(),r()];}
-  if(type==='mirror'){const a=[r(),r(),r(),r()];return [9,...a,r(),r(),r(),...a.slice().reverse()];}
-  if(type==='half'){const a=[r(),r(),r(),r(),r()];return [9,...a,...a];}
-  if(type==='alternate'){const a=r(),b=r();return [9,a,b,a,b,a,b,a,b,a];}
-  if(type==='stairs'||type==='stairsWide'){const start=r(),step=pickWeighted([[1,60],[2,22],[9,18]]);return [9,...Array.from({length:9},(_,i)=>(start+i*step)%10)];}
-  if(type==='lucky777'){return [9,7,7,7,r(),7,7,7,r(),r()];}
-  if(type==='lucky000'){return [9,0,0,0,r(),0,0,0,r(),r()];}
-  if(type==='lucky123'){const s=[1,2,3,1,2,3,rand(10),rand(10),1,2];return [9,...s];}
-  if(type==='all'){const a=pickWeighted([[7,36],[8,24],[9,20],[1,20]]);return Array(10).fill(a).map((v,i)=>i===0?9:v);}
-  if(type==='palindrome'){const a=[r(),r(),r(),r(),r()];return [9,a[0],a[1],a[2],a[3],a[4],a[3],a[2],a[1],a[0]];}
-  if(type==='blocks'){const a=r(),b=r(),c=r();return [9,a,a,b,b,c,c,r(),r(),r()];}
-  return d;
+function renderTop(){
+ const b=state.me?.balance??0,el=document.getElementById('balanceTop');if(el)el.textContent=Number(b).toLocaleString('ru-RU');
+ const n=document.getElementById('menuProfile');if(n)n.textContent=state.me?state.me.username:'Войти';
+ const online=document.getElementById('onlineCount');if(online&&state.onlineCount!=null)online.textContent=state.onlineCount;
+ renderAdminMenu();
 }
-function detect(d){
-  const body=d.slice(1), s=body.join('');
-  const groups=Object.values(body.reduce((m,x)=>(m[x]=(m[x]||0)+1,m),{})).sort((a,b)=>b-a);
-  let asc=0,desc=0;for(let i=2;i<10;i++){if(d[i]===d[i-1]+1)asc++;if(d[i]===d[i-1]-1)desc++;}
-  if(groups[0]>=9)return['Полный дубль','all'];
-  if(groups[0]>=7)return['Семёрка','sept'];
-  if(groups[0]>=6)return['Шестёрка','sext'];
-  if(groups[0]>=5)return['Пятёрка','quint'];
-  if(groups[0]>=4)return['Четвёрка','quad'];
-  if(s.slice(0,4)===s.slice(4).split('').reverse().join(''))return['Зеркало','mirror'];
-  if(body.slice(0,5).join('')===body.slice(5).join(''))return['Двойной блок','half'];
-  if(body.every((v,i)=>i<2||v===body[i%2]))return['Чередование','alternate'];
-  if(Math.max(asc,desc)>=7)return['Длинная лестница','stairsWide'];
-  if(Math.max(asc,desc)>=5)return['Лестница','stairs'];
-  if(s.includes('777'))return['Lucky 777','lucky777'];
-  if(s.includes('000'))return['Lucky 000','lucky000'];
-  if(s.includes('123'))return['123-пульс','lucky123'];
-  if(Object.values(body.reduce((m,x)=>(m[x]=(m[x]||0)+1,m),{})).filter(v=>v>=2).length>=3)return['Блоки','blocks'];
-  if(groups[0]>=3)return['Тройка','triple'];
-  if(groups[0]>=2)return['Двойная пара','pair'];
-  return['Случайная','random'];
+function renderAdminMenu(){
+ const grid=document.querySelector('.menu-grid');if(!grid)return;
+ let item=grid.querySelector('[data-action="admin"]');
+ if(state.me?.isAdmin){
+  if(!item){item=document.createElement('button');item.className='menu-item admin-item';item.dataset.action='admin';item.innerHTML='<b>АДМИН-ПАНЕЛЬ</b><span>Баланс, удача, промокоды и онлайн</span><em class="preview">ADMIN CONTROL</em>';grid.appendChild(item)}
+ }else if(item)item.remove();
 }
-function priceFor(d,rarityKey,type){
-  const body=d.slice(1);let score=500;
-  const maxGroup=Math.max(...Object.values(body.reduce((m,x)=>(m[x]=(m[x]||0)+1,m),{})));
-  score += (maxGroup-1)*4200;
-  const [_,t]=detect(d);
-  const bonus={random:0,pair:9000,triple:26000,quad:90000,quint:280000,sext:850000,sept:1600000,mirror:700000,half:1200000,alternate:420000,stairs:280000,stairsWide:850000,lucky777:175000,lucky000:95000,lucky123:70000,blocks:110000,all:25000000,palindrome:1600000}[t]||0;
-  score += bonus;
-  score += ({common:0,uncommon:5000,rare:50000,epic:250000,legendary:1200000,mythic:10000000}[rarityKey]||0);
-  score=Math.max(score, DROP_TABLE.find(x=>x.key===rarityKey).min);
-  score=Math.min(score, DROP_TABLE.find(x=>x.key===rarityKey).max);
-  return Math.round(score/100)*100;
-}
-function chanceFor(key){return DROP_TABLE.find(x=>x.key===key)||DROP_TABLE[0];}
-async function openDB(){
-  if(!('indexedDB' in window))return null;
-  if(dbPromise)return dbPromise;
-  dbPromise=new Promise((resolve,reject)=>{
-    const req=indexedDB.open(DB_NAME,1);
-    req.onupgradeneeded=()=>{if(!req.result.objectStoreNames.contains(STORE))req.result.createObjectStore(STORE,{keyPath:'number'});};
-    req.onsuccess=()=>resolve(req.result);req.onerror=()=>resolve(null);
-  });return dbPromise;
-}
-async function reserveLocal(number, data){
-  if(usedCache.has(number))return false;
-  const db=await openDB();
-  if(!db){usedCache.add(number);return true;}
-  return new Promise(resolve=>{
-    const tx=db.transaction(STORE,'readwrite'); const store=tx.objectStore(STORE);
-    const req=store.add({number,createdAt:Date.now(),rarity:data.rarityKey});
-    req.onsuccess=()=>{usedCache.add(number);resolve(true)};req.onerror=()=>resolve(false);
-  });
-}
-async function generateUniqueLocal(){
-  for(let i=0;i<80;i++){
-    const drop=pickDrop();const type=pickWeighted(TYPE_WEIGHTS[drop.key]);const d=makeByType(type);const number=fmt(d);
-    const ok=await reserveLocal(number,{rarityKey:drop.key}); if(!ok)continue;
-    const detected=detect(d);const price=priceFor(d,drop.key,type);const chance=chanceFor(drop.key);
-    return buildResult(d,drop,detected,price,chance);
-  }
-  const d=randomDigits();const drop=DROP_TABLE[0];return buildResult(d,drop,detect(d),priceFor(d,'common','random'),chanceFor('common'));
-}
-function buildResult(d,drop,detected,price,chance){
-  return {number:fmt(d),digits:d,rarityKey:drop.key,rarity:drop.label,rarityPct:drop.pct,oneIn:drop.oneIn,pattern:TYPE_LABELS[detected[1]]||detected[0],type:detected[1],price,chancePct:drop.pct,createdAt:Date.now()};
-}
-function historyRows(limit=5){
-  if(!state.history.length)return '<div class="muted" style="padding:9px 2px">После генерации здесь появятся твои номера.</div>';
-  return state.history.slice(0,limit).map(r=>`<div class="row"><div><strong>${esc(r.number)}</strong><small>${esc(r.rarity)} · ${esc(r.pattern)} · шанс ${esc(String(r.chancePct))}%</small></div><b>${money(r.price)}</b></div>`).join('');
+function rarityClass(r){return r||'common'}
+function luckBadge(){
+ const m=Number(state.me?.luckMultiplier||1);if(m<=1.001)return '';
+ return `<span class="tag luck-tag">X${Number(m.toFixed(2)).toString().replace('.','·')} УДАЧА</span>`;
 }
 function generatorView(){
-  const r=current;
-  const meter=Math.min(100,Math.max(0,Math.log10(Math.max(r.price,500))/8*100));
-  return `<section class="hero"><span class="eyebrow">MOBILE NUMBER HUNT</span><h1>Выбей самый дорогой номер</h1><p>Все типы номеров находятся в одном общем пуле. Каждый запуск случайно определяет редкость, шанс, комбинацию и игровую стоимость.</p></section>
-  <section class="card generator">
-    <div class="card-top"><div class="pill">ПУЛ: <b>1 000 000 000+</b> комбинаций</div><div class="pill">РЕКОРД: <b>${money(state.best)}</b></div></div>
-    <div id="stage" class="stage"><div class="stage-label">VIRTUAL MOBILE NUMBER</div>
-      <div class="phone-card"><div class="phone-head"><span>NEXUS NUMBER</span><span>RU · GAME ITEM</span></div><div class="phone-main" id="numberMain"><div class="country-mark">RUSSIA</div><div class="number">${esc(r.number)}</div><div class="nexus-mark">N</div></div><div class="phone-foot"><span>${esc(r.pattern.toUpperCase())}</span><span>${esc(r.rarity.toUpperCase())}</span></div></div>
-      <div class="result-meta"><div class="pattern"><small>ТИП КОМБИНАЦИИ</small>${esc(r.pattern)}</div><div class="rarity ${esc(r.rarityKey)}">${esc(r.rarity)}</div></div>
-      <div class="price-row"><span>Игровая стоимость</span><b>${money(r.price)}</b></div>
-      <div class="chance-row"><span>Шанс выпадения типа</span><strong>${r.chancePct}% · ${esc(r.oneIn)}</strong></div>
-      <div class="meter"><i style="width:${meter}%"></i></div>
-    </div>
-    <div class="actions"><button id="generateBtn" class="generate">СГЕНЕРИРОВАТЬ НОМЕР<span>ВСЕ ТИПЫ · ОДИН ОБЩИЙ ПУЛ · БЕЗ ПОВТОРОВ</span></button><div class="two-actions"><button id="shareBtn" class="sub">Поделиться</button><button id="settingsBtn" class="sub">Настройки</button></div></div>
-    <div class="quick"><div class="mini"><span>ГЕНЕРАЦИЙ</span><b>${state.attempts}</b></div><div class="mini"><span>МИФИЧЕСКИХ</span><b>${state.rareCounts.mythic||0}</b></div><div class="mini"><span>УНИКАЛЬНЫХ</span><b>${state.history.length}</b></div></div>
-  </section>
-  <section class="section"><div class="section-head"><div><h2>Последние результаты</h2><span class="muted">Номера не выбираются из фиксированного списка</span></div><button id="openCollection" class="chip">Все</button></div><div class="row-list">${historyRows(5)}</div></section>`;
+ const r=current||{number:'+7 999 000 00 00',rarityKey:'common',rarity:'Обычный',rarityPct:65,oneIn:'1 к 1,54',pattern:'Случайная',price:1000};
+ const meter=Math.min(100,Math.max(0,Math.log10(Math.max(r.price,1000))/12*100));
+ const logged=!!state.me;
+ return `<section class="hero"><span class="eyebrow">MOBILE NUMBER HUNT</span><h1>Выбей самый дорогой номер</h1><p>Все типы комбинаций смешаны в одном пуле. Цена зависит от самой комбинации цифр, а не назначается случайно.</p></section>
+ <section class="card generator"><div class="card-top"><div class="statusline"><span class="tag">1 из общего пула</span><span class="tag">${logged?'ONLINE':'НУЖЕН АККАУНТ'}</span>${luckBadge()}</div><div class="pill">Попытка <b>${state.attempts}</b></div></div>
+ <div id="stage" class="stage"><div class="stage-label">ВЫПАВШАЯ SIM-КАРТА</div><div class="phone-card"><div class="phone-head"><span>NEXUS NUMBER</span><span>${esc(r.pattern||'Случайная')}</span></div><div id="numberMain" class="phone-main"><div class="country-mark">RUSSIA</div><div class="number">${esc(r.number)}</div><div class="nexus-mark">N</div></div><div class="phone-foot"><span>${logged?esc(state.me.username):'GUEST'}</span><span>FICTIONAL GAME ITEM</span></div></div>
+ <div class="result-meta"><div class="pattern"><small>КОМБИНАЦИЯ</small>${esc(r.pattern||'Случайная')}</div><div class="rarity ${rarityClass(r.rarityKey)}">${esc(r.rarity||'Обычный')}</div></div>
+ <div class="price-row"><span>Стоимость SIM</span><b>${money(r.price)}</b></div><div class="chance-row"><span>Шанс редкости</span><strong>${esc(r.oneIn||'—')} · ${esc(String(r.rarityPct||r.chancePct||0))}%</strong></div><div class="meter"><i style="width:${meter}%"></i></div>
+ </div><div class="actions"><button id="generateBtn" class="generate">${logged?'СГЕНЕРИРОВАТЬ':'ВОЙТИ / ЗАРЕГИСТРИРОВАТЬСЯ'}<span>${logged?'Стоимость попытки: 1 000 ₽':'Чтобы играть и попасть в общий рейтинг'}</span></button><div class="two-actions"><button id="shareBtn" class="sub">Поделиться</button><button id="openCollection" class="sub">Мой инвентарь</button></div></div>
+ <div class="quick"><div class="mini"><span>Баланс</span><b>${money(state.me?.balance||0)}</b></div><div class="mini"><span>Лучший дроп</span><b>${state.best?money(state.best):'—'}</b></div><div class="mini"><span>SIM в инв.</span><b>${state.me?.inventoryCount??state.serverInventory.length}</b></div></div></section>
+ <section class="section"><div class="section-head"><div><h2>Сейчас выбили</h2><div class="muted">Онлайн-лента редких находок</div></div><span class="tag">LIVE</span></div><div id="liveFeed" class="live-feed"><div class="empty">Загрузка ленты…</div></div></section>`;
 }
-function catalogView(){
-  return `<section class="hero"><span class="eyebrow">NUMBER MARKET</span><h1>Каталог редкости</h1><p>Витрина автоматически создаётся из разных типов комбинаций. Генератор при этом использует общий случайный пул.</p></section><section class="section"><div class="filters"><input id="search" class="field" placeholder="Поиск по номеру или типу"><div class="chips" id="rarityChips">${DROP_TABLE.map(x=>`<button class="chip ${x.key==='all'?'active':''}" data-rarity="${x.key}">${x.label}</button>`).join('')}<button class="chip active" data-rarity="all">Все</button></div><div class="chips" id="sortChips"><button class="chip active" data-sort="priceDesc">Дорогие</button><button class="chip" data-sort="priceAsc">Дешёвые</button></div></div></section><div id="catalogGrid" class="catalog-grid"></div>`;
+function invRow(r){return `<div class="row"><div><strong>${esc(r.number)}</strong><small>${esc(r.rarity||'Обычный')} · ${esc(r.pattern||'Случайная')} · ${money(r.price)}</small></div><button class="sell" data-sell="${esc(r.id||r.number)}" data-price="${Number(r.price||0)}">Продать</button></div>`}
+function collectionView(){const items=state.serverInventory||[];return `<section class="hero"><span class="eyebrow">MY INVENTORY</span><h1>Мои SIM-карты</h1><p>Цена каждой SIM определяется её комбинацией. Продажа возвращает 80% стоимости.</p></section><section class="section"><div class="section-head"><h2>Баланс</h2><b>${money(state.me?.balance||0)}</b></div><div class="row-list" id="inventoryList">${items.length?items.map(invRow).join(''):'<div class="empty">Инвентарь пока пуст.</div>'}</div></section>`}
+function rankRow(i,x){const inv=Number(x.inventoryCount||0);return `<div class="rank ${i<=3?'top':''}"><div class="pos">#${i}</div><div><strong>${esc(x.username||'Игрок')}</strong><small>${esc(x.bestNumber||'—')} · ${esc(x.bestRarity||'—')}<br>Инвентарь: ${inv} SIM${x.online?' · <span style="color:#57d79d">ONLINE</span>':''}</small></div><div class="sum">${money(x.bestPrice||0)}</div></div>`}
+function ratingView(){return `<section class="hero"><span class="eyebrow">LIVE LEADERBOARD</span><h1>Самые дорогие SIM</h1><p>Только реальные зарегистрированные игроки из общей онлайн-базы.</p></section><section class="section"><div class="section-head"><h2>ТОП игроков</h2><span class="tag">ONLINE DATA</span></div><div id="leaderboard" class="lb"><div class="empty">Загрузка рейтинга…</div></div></section>`}
+function statsView(){return `<section class="hero"><span class="eyebrow">DROP DATA</span><h1>Шансы и редкость</h1><p>Редкость рассчитывается сервером. При X2 удаче редкие уровни получают повышенный вес, а цена отдельно зависит от комбинации.</p></section><section class="section"><div class="stats"><div class="bigstat"><span>Генераций</span><b>${state.attempts}</b></div><div class="bigstat"><span>Редких+</span><b>${state.rareCounts.rare+state.rareCounts.epic+state.rareCounts.legendary+state.rareCounts.mythic}</b></div><div class="bigstat"><span>Рекорд</span><b>${state.best?money(state.best):'—'}</b></div><div class="bigstat"><span>SIM</span><b>${state.me?.inventoryCount??state.serverInventory.length}</b></div></div><h2 style="margin:15px 0 4px;font-size:16px">Базовые шансы</h2>${DROP_TABLE.map(x=>`<div class="barrow"><span>${x.label}</span><div class="bar"><i style="width:${Math.min(100,x.pct)}%"></i></div><b>${x.pct}% · ${x.oneIn}</b></div>`).join('')}<div class="modal-note" style="margin-top:12px">Все цифры выпадают из общего серверного пула. Одинаковый полный номер не может быть выдан дважды.</div></section>`}
+function settingsView(){return `<section class="hero"><span class="eyebrow">CONTROL</span><h1>Настройки</h1><p>Только настройки игры и профиля. Технические адреса Worker здесь не показываются.</p></section><section class="section"><div class="row"><div><strong>Звук</strong><small>Сигнал после генерации</small></div><button id="soundBtn" class="chip ${state.sound?'active':''}">${state.sound?'ВКЛ':'ВЫКЛ'}</button></div><div class="row" style="margin-top:8px"><div><strong>Аккаунт</strong><small>${state.me?esc(state.me.username):'Не выполнен вход'}</small></div><button id="authSettingsBtn" class="chip">${state.me?'Профиль':'Войти'}</button></div><div class="row" style="margin-top:8px"><div><strong>Локальная история</strong><small>Сбрасывает только историю отображения и счётчики</small></div><button id="resetBtn" class="chip">Сброс</button></div></section>`}
+function adminView(){
+ if(!state.me?.isAdmin)return `<section class="section"><div class="empty">Доступ запрещён.</div></section>`;
+ const d=state.adminData||{},luck=d.luck||{globalMultiplier:1,globalUntil:0};
+ const until=Number(luck.globalUntil||0)>Date.now()?new Date(luck.globalUntil).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}):'выключена';
+ return `<section class="hero admin-hero"><span class="eyebrow">ADMIN CONTROL</span><h1>Админ-панель</h1><p>Только для аккаунта администратора. Изменения применяются сразу в D1.</p></section>
+ <section class="section admin-grid">
+  <div class="admin-card"><div class="section-head"><h2>Глобальная удача</h2><span class="tag">X${Number(luck.globalMultiplier||1).toFixed(2).replace('.00','')}</span></div><div class="modal-note">Сейчас: <b>${esc(until)}</b></div><div class="admin-fields"><select id="luckMultiplier" class="field"><option value="1">1× — выключить</option><option value="1.5">1.5×</option><option value="2">2×</option><option value="3">3×</option><option value="5">5×</option></select><input id="luckDuration" class="field" type="number" min="1" max="43200" value="60" placeholder="Минуты"><button id="applyLuck" class="primary">Запустить удачу</button></div></div>
+  <div class="admin-card"><div class="section-head"><h2>Начислить баланс</h2><span class="tag">INSTANT</span></div><div class="admin-fields"><input id="grantUser" class="field" maxlength="20" placeholder="Логин игрока"><input id="grantAmount" class="field" type="number" min="1" max="100000000000000" placeholder="Сумма ₽"><button id="grantBalance" class="primary">Начислить</button></div></div>
+  <div class="admin-card"><div class="section-head"><h2>Создать промокод</h2><span class="tag">PROMO</span></div><div class="admin-fields"><input id="promoCode" class="field" maxlength="32" placeholder="Код, например NEXUS500"><select id="promoRewardType" class="field"><option value="money">Деньги</option><option value="luck">Бафф удачи</option></select><input id="promoAmount" class="field" type="number" min="1" placeholder="Сумма ₽"><div id="promoLuckBox" class="hidden"><select id="promoRewardMode" class="field"><option value="x">X удачи</option><option value="percent">Процент к удаче</option></select><input id="promoLuckValue" class="field" type="number" min="0.01" step="0.01" placeholder="Например 2 или 50"><input id="promoDuration" class="field" type="number" min="1" max="43200" value="60" placeholder="Длительность, минут"></div><input id="promoMaxUses" class="field" type="number" min="0" max="1000000" value="0" placeholder="Лимит использований, 0 = без лимита"><input id="promoExpires" class="field" type="number" min="0" max="43200" value="0" placeholder="Срок действия кода, минут; 0 = без срока"><button id="createPromo" class="primary">Создать промокод</button></div></div>
+  <div class="admin-card"><div class="section-head"><h2>Онлайн</h2><button id="adminRefresh" class="chip">Обновить</button></div><div class="admin-online"><b>${Number(d.onlineCount||state.onlineCount||0)}</b><span>игроков онлайн</span></div><div class="admin-list">${(d.players||[]).slice(0,30).map(x=>`<div class="admin-line"><span><b>${esc(x.username)}</b>${x.online?' · <i>ONLINE</i>':''}</span><strong>${money(x.balance)}</strong></div>`).join('')||'<div class="empty">Нет игроков</div>'}</div></div>
+  <div class="admin-card"><div class="section-head"><h2>Промокоды</h2><span class="tag">${(d.promos||[]).length}</span></div><div class="admin-list">${(d.promos||[]).map(p=>`<div class="admin-line"><span><b>${esc(p.code)}</b><small>${p.rewardType==='money'?money(p.amount):(p.rewardMode==='percent'?`+${Math.max(1,Math.round((Number(p.luckValue||1)-1)*100))}% удачи`:`X${Number(p.luckValue||1).toFixed(2)} удачи`)+` · ${Math.round(Number(p.durationSeconds||0)/60)} мин`}</small></span><span>${p.uses}/${p.maxUses||'∞'} <button class="chip promo-toggle" data-promo-id="${esc(p.id)}">${p.active?'ВЫКЛ':'ВКЛ'}</button></span></div>`).join('')||'<div class="empty">Промокодов пока нет</div>'}</div></div>
+ </section>`;
 }
-function makeCatalog(){
-  const list=[];const rar=DROP_TABLE.map(x=>x.key);const types=Object.keys(TYPE_LABELS);
-  for(let i=0;i<72;i++){
-    const rk=rar[i%rar.length];const type=types[(i*7+3)%types.length];let d=makeByType(type);if(d[0]!==9)d[0]=9;const detected=detect(d);const drop=DROP_TABLE.find(x=>x.key===rk)||DROP_TABLE[0];list.push(buildResult(d,drop,detected,priceFor(d,rk,type),chanceFor(rk)));
-  }return list;
+function navigate(next){
+ if(next==='admin'&&!state.me?.isAdmin){toast('Нет доступа');return navigate('generator')}
+ page=next;const titles={generator:'Генератор',collection:'Инвентарь',rating:'Рейтинг',stats:'Стата',settings:'Настройки',admin:'Админ-панель'};document.getElementById('pageTitle').textContent=titles[next]||'Генератор';document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===next));
+ const view=document.getElementById('appView');view.innerHTML=({generator:generatorView,collection:collectionView,rating:ratingView,stats:statsView,settings:settingsView,admin:adminView}[next]||generatorView)();renderTop();bindPage();
+ window.scrollTo({top:0,behavior:'smooth'});
+ if(next==='collection')loadInventory();if(next==='rating')loadLeaderboard();if(next==='generator')loadFeed();if(next==='admin')loadAdminData();
 }
-let catalog=makeCatalog();
-function renderCatalog(){
-  const root=document.getElementById('catalogGrid');if(!root)return;
-  const q=(document.getElementById('search')?.value||'').toLowerCase().trim();const active=document.querySelector('#rarityChips .chip.active')?.dataset.rarity||'all';const sort=document.querySelector('#sortChips .chip.active')?.dataset.sort||'priceDesc';
-  let data=catalog.filter(x=>(active==='all'||x.rarityKey===active)&&(!q||x.number.toLowerCase().includes(q)||x.pattern.toLowerCase().includes(q)||x.rarity.toLowerCase().includes(q)));
-  data.sort((a,b)=>sort==='priceAsc'?a.price-b.price:b.price-a.price);
-  root.innerHTML=data.map((x,i)=>`<div class="catalog-card"><div class="catalog-number">${esc(x.number)}</div><div><strong>${esc(x.pattern)}</strong><small>${esc(x.rarity)} · ${x.chancePct}%</small></div><div><b>${money(x.price)}</b><button class="open-item" data-index="${i}">Открыть</button></div></div>`).join('')||'<div class="section muted">Ничего не найдено.</div>';
-  root.querySelectorAll('[data-index]').forEach(btn=>btn.addEventListener('click',()=>{const x=data[Number(btn.dataset.index)];current=x;state.current=x;save();navigate('generator');toast('Комбинация открыта');}));
-}
-function collectionView(){return `<section class="hero"><span class="eyebrow">MY NUMBERS</span><h1>Коллекция</h1><p>Все уникальные номера, которые ты получил на этом устройстве.</p></section><section class="section"><div class="stats"><div class="bigstat"><span>Собрано</span><b>${state.history.length}</b></div><div class="bigstat"><span>Сумма цен</span><b>${money(state.history.reduce((a,x)=>a+Number(x.price||0),0))}</b></div></div><div class="row-list" style="margin-top:10px">${historyRows(100)}</div></section>`;}
-function ratingView(){return `<section class="hero"><span class="eyebrow">GLOBAL HUNT</span><h1>Лидерборд</h1><p>Соревнование по стоимости: кто выбил самый дорогой номер.</p></section><section class="section"><div id="leaderboard" class="lb"></div><div style="margin-top:10px;display:grid;grid-template-columns:1fr auto;gap:8px"><input id="nick" class="field" maxlength="20" value="${esc(state.nick)}" placeholder="Твой ник"><button id="sendScore" class="primary">В рейтинг</button></div><div id="ratingStatus" class="muted" style="margin-top:8px">${API_BASE?'Онлайн-режим подключён.':'Worker не подключён — пока работает локальный интерфейс.'}</div></section>`;}
-async function loadLeaderboard(){
-  const root=document.getElementById('leaderboard');if(!root)return;
-  if(!API_BASE){root.innerHTML=DEMO_LEADERS.map((x,i)=>rankRow(i+1,x[0],x[1],x[2],x[3])).join('')+rankRow(DEMO_LEADERS.length+1,state.nick,state.best,current?.number||'—',current?.rarity||'');return;}
-  try{const r=await fetch(API_BASE+'/api/leaderboard?limit=100');if(!r.ok)throw new Error();const data=await r.json();const items=data.items||[];root.innerHTML=items.length?items.map((x,i)=>rankRow(i+1,x.nickname,x.price,x.number,x.rarity)).join(''):'<div class="muted">Пока нет результатов.</div>';}catch{root.innerHTML=DEMO_LEADERS.map((x,i)=>rankRow(i+1,x[0],x[1],x[2],x[3])).join('');const s=document.getElementById('ratingStatus');if(s)s.textContent='Worker временно недоступен — показана локальная витрина.';}
-}
-function rankRow(i,n,p,num,r){return `<div class="rank ${i<=3?'top':''}"><div class="pos">#${i}</div><div><strong>${esc(n||'Игрок')}</strong><small>${esc(num||'—')} · ${esc(r||'')}</small></div><div class="sum">${money(p)}</div></div>`;}
-function statsView(){const total=Math.max(1,state.attempts);const rareTotal=Object.entries(state.rareCounts).filter(([k])=>k!=='common').reduce((a,[,v])=>a+v,0);return `<section class="hero"><span class="eyebrow">DROP DATA</span><h1>Статистика</h1><p>Реальные игровые вероятности классов, результаты и рекорд.</p></section><section class="section"><div class="stats"><div class="bigstat"><span>Генераций</span><b>${state.attempts}</b></div><div class="bigstat"><span>Редких</span><b>${rareTotal}</b></div><div class="bigstat"><span>Рекорд</span><b>${money(state.best)}</b></div><div class="bigstat"><span>Уникальных</span><b>${state.history.length}</b></div></div><h2 style="margin:15px 0 4px;font-size:16px">Таблица шансов</h2>${DROP_TABLE.map(x=>{const got=state.rareCounts[x.key]||0;const p=total?Math.round(got/total*1000)/10:0;return `<div class="barrow"><span>${x.label}</span><div class="bar"><i style="width:${Math.min(100,p/Math.max(x.pct,0.001)*100)}%"></i></div><b>${x.pct}%</b></div>`}).join('')}</section>`;}
-function settingsView(){return `<section class="hero"><span class="eyebrow">CONTROL</span><h1>Настройки</h1><p>Подключение Worker, звук и локальный прогресс.</p></section><section class="section"><div class="row"><div><strong>Worker API</strong><small>${API_BASE?esc(API_BASE):'Не указан'}</small></div><button id="apiBtn" class="chip">Изменить</button></div><div class="row" style="margin-top:8px"><div><strong>Звук</strong><small>Сигнал после генерации</small></div><button id="soundBtn" class="chip ${state.sound?'active':''}">${state.sound?'ВКЛ':'ВЫКЛ'}</button></div><div class="row" style="margin-top:8px"><div><strong>Сбросить локальные данные</strong><small>Коллекция, рекорд и статистика</small></div><button id="resetBtn" class="chip">Сброс</button></div></section>`;}
-function navigate(next){page=next;const title={generator:'Генератор',catalog:'Каталог',collection:'Коллекция',rating:'Рейтинг',stats:'Стата',settings:'Настройки'}[next]||'Генератор';document.getElementById('pageTitle').textContent=title;document.querySelectorAll('.nav-btn').forEach(b=>b.classList.toggle('active',b.dataset.page===next));const view=document.getElementById('appView');view.innerHTML={generator:generatorView,catalog:catalogView,collection:collectionView,rating:ratingView,stats:statsView,settings:settingsView}[next]();bindPage();window.scrollTo({top:0,behavior:'smooth'});if(next==='catalog')renderCatalog();if(next==='rating')loadLeaderboard();}
 function bindPage(){
-  document.getElementById('generateBtn')?.addEventListener('click',generate);
-  document.getElementById('shareBtn')?.addEventListener('click',share);
-  document.getElementById('settingsBtn')?.addEventListener('click',()=>navigate('settings'));
-  document.getElementById('openCollection')?.addEventListener('click',()=>navigate('collection'));
-  document.querySelectorAll('[data-rarity]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#rarityChips .chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderCatalog();}));
-  document.querySelectorAll('[data-sort]').forEach(b=>b.addEventListener('click',()=>{document.querySelectorAll('#sortChips .chip').forEach(x=>x.classList.remove('active'));b.classList.add('active');renderCatalog();}));
-  document.getElementById('search')?.addEventListener('input',renderCatalog);
-  document.getElementById('sendScore')?.addEventListener('click',sendScore);
-  document.getElementById('nick')?.addEventListener('input',e=>{state.nick=e.target.value;save();});
-  document.getElementById('apiBtn')?.addEventListener('click',()=>{const v=prompt('Вставь URL Cloudflare Worker',API_BASE);if(v!==null){try{localStorage.setItem('nexus_api',v.trim().replace(/\/$/,''));location.reload();}catch{}}});
-  document.getElementById('soundBtn')?.addEventListener('click',()=>{state.sound=!state.sound;save();navigate('settings');});
-  document.getElementById('resetBtn')?.addEventListener('click',async()=>{if(!confirm('Удалить локальную коллекцию и статистику?'))return;state.attempts=0;state.best=0;state.history=[];state.rareCounts={common:0,uncommon:0,rare:0,epic:0,legendary:0,mythic:0};state.current=null;current=null;usedCache.clear();try{localStorage.removeItem(STORAGE_KEY);}catch{};navigate('generator');toast('Локальные данные сброшены');});
+ document.getElementById('generateBtn')?.addEventListener('click',generate);document.getElementById('shareBtn')?.addEventListener('click',share);document.getElementById('openCollection')?.addEventListener('click',()=>navigate('collection'));document.getElementById('authBtn')?.addEventListener('click',()=>openAuth());document.getElementById('authSettingsBtn')?.addEventListener('click',()=>openAuth());
+ document.getElementById('soundBtn')?.addEventListener('click',()=>{state.sound=!state.sound;save();navigate('settings')});
+ document.getElementById('resetBtn')?.addEventListener('click',()=>{if(!confirm('Сбросить историю и локальные данные интерфейса?'))return;state.attempts=0;state.best=0;state.history=[];state.rareCounts={common:0,uncommon:0,rare:0,epic:0,legendary:0,mythic:0};state.current=null;current=null;save();navigate('generator');toast('Локальная история сброшена')});
+ document.querySelectorAll('[data-sell]').forEach(b=>b.addEventListener('click',()=>sellItem(b.dataset.sell,Number(b.dataset.price||0))));
+ document.getElementById('applyLuck')?.addEventListener('click',adminApplyLuck);document.getElementById('grantBalance')?.addEventListener('click',adminGrantBalance);document.getElementById('createPromo')?.addEventListener('click',adminCreatePromo);document.getElementById('adminRefresh')?.addEventListener('click',loadAdminData);document.querySelectorAll('.promo-toggle').forEach(b=>b.addEventListener('click',()=>adminTogglePromo(b.dataset.promoId)));
+ document.getElementById('promoRewardType')?.addEventListener('change',()=>{const box=document.getElementById('promoLuckBox'),amt=document.getElementById('promoAmount');const luck=document.getElementById('promoRewardType').value==='luck';box?.classList.toggle('hidden',!luck);if(amt)amt.classList.toggle('hidden',luck);});
 }
+function openMenu(v){const o=document.getElementById('menuOverlay');o.classList.toggle('hidden',!v);o.setAttribute('aria-hidden',v?'false':'true');renderAdminMenu()}
+function openModal(html){document.getElementById('modalRoot').innerHTML=html}
+function closeModal(){document.getElementById('modalRoot').innerHTML=''}
+function authModal(mode='login'){
+ const reg=mode==='register';
+ openModal(`<div class="modal"><div class="modal-card"><div class="modal-head"><div><span class="eyebrow">NEXUS ACCOUNT</span><h2>${reg?'Регистрация':'Вход'}</h2></div><button class="close" id="modalClose">×</button></div><div class="modal-body"><div class="modal-row"><label>ЛОГИН</label><input id="authUser" class="field" maxlength="20" autocomplete="username" placeholder="Например: DIGITKING"></div><div class="modal-row"><label>ПАРОЛЬ</label><input id="authPass" class="field" type="password" minlength="6" maxlength="72" autocomplete="${reg?'new-password':'current-password'}" placeholder="Минимум 6 символов"></div><div class="modal-note">Данные аккаунта и игровые номера хранятся в общей D1-базе.</div></div><div class="modal-actions"><button id="authSubmit" class="primary">${reg?'Создать аккаунт':'Войти'}</button><button id="authSwitch" class="secondary">${reg?'У меня уже есть аккаунт':'Регистрация'}</button></div></div></div>`);
+ document.getElementById('modalClose').onclick=closeModal;document.getElementById('authSwitch').onclick=()=>authModal(reg?'login':'register');document.getElementById('authSubmit').onclick=()=>submitAuth(reg);
+}
+function openAuth(){if(state.me){openProfileModal();return}authModal('login')}
+async function submitAuth(reg){
+ const username=document.getElementById('authUser')?.value.trim(),password=document.getElementById('authPass')?.value;
+ if(!/^[A-Za-z0-9_А-Яа-яЁё-]{3,20}$/.test(username||'')){toast('Логин: 3–20 символов');return}
+ if((password||'').length<6){toast('Пароль минимум 6 символов');return}
+ try{const data=await api(reg?'/api/register':'/api/login',{method:'POST',body:JSON.stringify({username,password})});state.auth=data.token;state.me=data.user;state.onlineCount=state.onlineCount||0;save();closeModal();toast(reg?'Аккаунт создан':'Вход выполнен');await refreshMe();await heartbeat();navigate(page);startLive()}
+ catch(e){toast(e.message==='USERNAME_TAKEN'?'Логин уже занят':e.message==='INVALID_CREDENTIALS'?'Неверный логин или пароль':e.message==='RATE_LIMITED'?'Слишком много запросов, попробуй позже':'Не удалось выполнить запрос')}
+}
+function openProfileModal(){
+ const m=state.me;if(!m)return openAuth();
+ openModal(`<div class="modal"><div class="modal-card"><div class="modal-head"><div><span class="eyebrow">PLAYER PROFILE</span><h2>${esc(m.username)}</h2></div><button class="close" id="profileClose">×</button></div><div class="stats"><div class="bigstat"><span>Баланс</span><b>${money(m.balance||0)}</b></div><div class="bigstat"><span>SIM</span><b>${m.inventoryCount||0}</b></div><div class="bigstat"><span>Рекорд</span><b>${money(m.bestPrice||0)}</b></div><div class="bigstat"><span>Удача</span><b>X${Number(m.luckMultiplier||1).toFixed(2)}</b></div></div>
+ <div class="modal-body"><div class="modal-row"><label>НИК</label><input id="nickInput" class="field" maxlength="20" value="${esc(m.username)}"></div><button id="saveNick" class="primary">Сохранить ник</button><div class="modal-row"><label>ПРОМОКОД</label><input id="promoInput" class="field" maxlength="32" placeholder="Введите код"></div><button id="redeemPromo" class="secondary">Активировать промокод</button></div>
+ <div class="modal-actions">${m.isAdmin?'<button id="profileAdmin" class="primary">Админ-панель</button>':'<button id="profileInventory" class="primary">Инвентарь</button>'}<button id="profileLogout" class="secondary">Выйти</button></div></div></div>`);
+ document.getElementById('profileClose').onclick=closeModal;document.getElementById('saveNick').onclick=saveNickname;document.getElementById('redeemPromo').onclick=redeemPromo;document.getElementById('profileInventory')?.addEventListener('click',()=>{closeModal();navigate('collection')});document.getElementById('profileAdmin')?.addEventListener('click',()=>{closeModal();navigate('admin')});document.getElementById('profileLogout').onclick=logout;
+}
+async function saveNickname(){
+ const username=document.getElementById('nickInput')?.value.trim();if(!/^[A-Za-z0-9_А-Яа-яЁё-]{3,20}$/.test(username||'')){toast('Ник: 3–20 символов');return}
+ try{const data=await api('/api/profile',{method:'PATCH',body:JSON.stringify({username})});state.me=data.user;save();closeModal();toast('Ник изменён');navigate(page)}catch(e){toast(e.message==='USERNAME_TAKEN'?'Такой ник уже занят':'Не удалось изменить ник')}
+}
+async function redeemPromo(){
+ const code=document.getElementById('promoInput')?.value.trim();if(!code){toast('Введи промокод');return}
+ try{const data=await api('/api/promo/redeem',{method:'POST',body:JSON.stringify({code})});state.me=data.user;save();closeModal();toast(data.rewardType==='money'?`Начислено ${money(data.amount)}`:(data.rewardMode==='percent'?`Бафф +${Math.max(1,Math.round((Number(data.luckValue||1)-1)*100))}% активирован`:`Бафф X${Number(data.luckValue||1).toFixed(2)} активирован`));navigate(page)}catch(e){const map={PROMO_NOT_FOUND:'Промокод не найден',PROMO_ALREADY_USED:'Ты уже использовал этот код',PROMO_EXPIRED:'Промокод недействителен',PROMO_LIMIT:'Лимит промокода исчерпан',AUTH_REQUIRED:'Выполни вход'};toast(map[e.message]||'Не удалось активировать промокод')}
+}
+async function logout(){if(state.auth){try{await api('/api/logout',{method:'POST',body:'{}'})}catch{}}state.auth=null;state.me=null;state.serverInventory=[];state.adminData=null;save();closeModal();toast('Вы вышли');navigate('generator')}
+async function refreshMe(){if(!state.auth)return;try{const data=await api('/api/me');state.me=data.user;save();renderTop()}catch{state.auth=null;state.me=null;save()}}
+async function loadInventory(){if(!state.me)return;try{const data=await api('/api/inventory');state.serverInventory=data.items||[];state.me.balance=data.balance;state.me.inventoryCount=data.items.length;save();const view=document.getElementById('appView');if(page==='collection'&&view){view.innerHTML=collectionView();bindPage();renderTop()}}catch{toast('Не удалось загрузить инвентарь')}}
 async function generate(){
-  if(rolling)return;rolling=true;const btn=document.getElementById('generateBtn'),stage=document.getElementById('stage'),main=document.getElementById('numberMain');if(btn)btn.disabled=true;stage?.classList.add('roll');
-  const started=Date.now();
-  const interval=setInterval(()=>{if(main)main.innerHTML='<div class="country-mark">RUSSIA</div><div class="number">+7 9'+String(rand(1e8)).padStart(8,'0').replace(/(\d{3})(\d{3})(\d{2})$/,'$1 $2 $3')+'</div><div class="nexus-mark">N</div>';},65);
-  let result;
-  try{
-    if(API_BASE){
-      const rr=await fetch(API_BASE+'/api/generate',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({playerId:state.playerId})});
-      if(rr.ok){const data=await rr.json();if(data.ok)result=data.result;}
-    }
-    if(!result)result=await generateUniqueLocal();
-  }catch{result=await generateUniqueLocal();}
-  const wait=Math.max(850-Date.now()+started,0);setTimeout(()=>{
-    clearInterval(interval);current=result;state.current=result;state.attempts++;state.best=Math.max(state.best,Number(result.price||0));state.rareCounts[result.rarityKey]=(state.rareCounts[result.rarityKey]||0)+1;state.history.unshift(result);state.history=state.history.slice(0,250);save();play(result.rarityKey==='mythic'||result.rarityKey==='legendary'?'rare':'normal');rolling=false;navigate('generator');toast(result.rarityKey==='mythic'?'МИФИЧЕСКИЙ НОМЕР!':'Номер сгенерирован');},wait);
+ if(rolling)return;if(!state.me){openAuth();return}rolling=true;
+ const stage=document.getElementById('stage'),btn=document.getElementById('generateBtn'),main=document.getElementById('numberMain');btn&&(btn.disabled=true);stage?.classList.add('roll');const started=Date.now();
+ const interval=setInterval(()=>{if(main){const d=[9,...Array.from({length:9},()=>Math.floor(Math.random()*10))];main.innerHTML=`<div class="country-mark">RUSSIA</div><div class="number">${esc(fmt(d))}</div><div class="nexus-mark">N</div>`}},55);
+ let result;try{const data=await api('/api/generate',{method:'POST',body:'{}'});result=data.result;state.me=data.user}catch(e){clearInterval(interval);stage?.classList.remove('roll');rolling=false;toast(e.message==='INSUFFICIENT_BALANCE'?'Недостаточно баланса':e.message==='AUTH_REQUIRED'?'Выполни вход':e.message==='RATE_LIMITED'?'Слишком много генераций подряд':'Ошибка генерации');return}
+ const wait=Math.max(1050-(Date.now()-started),200);setTimeout(()=>{clearInterval(interval);stage?.classList.remove('roll');current=result;state.current=result;state.attempts++;state.best=Math.max(state.best,Number(result.price||0));state.rareCounts[result.rarityKey]=(state.rareCounts[result.rarityKey]||0)+1;state.history.unshift(result);state.history=state.history.slice(0,200);save();play(result.rarityKey==='mythic'||result.rarityKey==='legendary'?'rare':'normal');rolling=false;navigate('generator');toast(result.rarityKey==='mythic'?'МИФИЧЕСКИЙ НОМЕР — ДЖЕКПОТ!':result.rarityKey==='legendary'?'ЛЕГЕНДАРНЫЙ НОМЕР!':`SIM получена · X${Number(result.luckMultiplier||1).toFixed(2)} удача`)},wait)
 }
-function play(kind){if(!state.sound)return;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=new C();const o=c.createOscillator(),g=c.createGain();o.connect(g);g.connect(c.destination);const t=c.currentTime;o.type='sine';o.frequency.value=kind==='rare'?760:290;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.045,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+(kind==='rare'?.36:.16));o.start(t);o.stop(t+(kind==='rare'?.4:.2));}catch{}}
-async function share(){if(!current)return;const text=`Я выбил ${current.number} — ${money(current.price)} · ${current.rarity} · шанс ${current.chancePct}%. Nexus Number`;try{if(navigator.share){await navigator.share({title:'Nexus Number',text});return;}await navigator.clipboard.writeText(text);toast('Результат скопирован');}catch{toast('Не удалось поделиться');}}
-async function sendScore(){if(!current){toast('Сначала сгенерируй номер');return;}const input=document.getElementById('nick');const nick=(input?.value||state.nick||'Игрок').trim().slice(0,20)||'Игрок';state.nick=nick;save();const s=document.getElementById('ratingStatus');if(!API_BASE){if(s)s.textContent='Локальный режим: подключи Worker для общего рейтинга.';toast('Worker не подключён');return;}if(s)s.textContent='Отправляем…';try{const rr=await fetch(API_BASE+'/api/score',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({playerId:state.playerId,nickname:nick,number:current.number,digits:current.digits,price:current.price,rarity:current.rarityKey,pattern:current.pattern})});const data=await rr.json().catch(()=>({}));if(!rr.ok||!data.ok)throw new Error(data.error||'bad');if(s)s.textContent='Результат записан в общий рейтинг.';await loadLeaderboard();toast('В рейтинг отправлено');}catch(e){if(s)s.textContent='Не удалось записать результат. Проверь Worker.';toast('Ошибка Worker');}}
-function openMenu(v){document.getElementById('menuOverlay').classList.toggle('hidden',!v);document.getElementById('menuOverlay').setAttribute('aria-hidden',v?'false':'true');}
+async function sellItem(id,price){if(!confirm(`Продать SIM за ${money(Math.round(price*.8))}?`))return;try{const data=await api('/api/sell',{method:'POST',body:JSON.stringify({itemId:id})});state.me=data.user;toast('SIM продана');await loadInventory();}catch(e){toast(e.message==='ITEM_NOT_FOUND'?'SIM уже продана':'Не удалось продать')}}
+async function loadLeaderboard(){const root=document.getElementById('leaderboard');if(!root)return;try{const data=await api('/api/leaderboard?limit=100');root.innerHTML=data.items?.length?data.items.map((x,i)=>rankRow(i+1,x)).join(''):'<div class="empty">Пока никто не выбил SIM.</div>';state.onlineCount=Number(data.onlineCount||0);save();renderTop()}catch{root.innerHTML='<div class="empty">Не удалось загрузить общий рейтинг.</div>'}}
+async function loadFeed(){const root=document.getElementById('liveFeed');if(!root)return;try{const data=await api('/api/feed?limit=12');root.innerHTML=data.items?.length?data.items.map(x=>`<div class="feed-row"><div><strong>${esc(x.username)} выбил ${esc(x.number)}</strong><small>${esc(x.rarity)} · ${esc(x.pattern)} · ${esc(x.createdAtText||'только что')}</small></div><b>${money(x.price)}</b></div>`).join(''):'<div class="empty">Редких находок пока нет.</div>'}catch{root.innerHTML='<div class="empty">Лента временно недоступна.</div>'}}
+async function refreshOnline(){try{const data=await api('/api/leaderboard?limit=1');state.onlineCount=Number(data.onlineCount||0);save();renderTop()}catch{}}
+async function heartbeat(){if(!state.auth)return;try{const data=await api('/api/heartbeat',{method:'POST',body:'{}'});if(data.user){state.me=data.user;save()}state.onlineCount=Number(data.onlineCount||0);renderTop()}catch{}}
+function startLive(){clearInterval(feedTimer);clearInterval(onlineTimer);loadFeed();refreshOnline();heartbeat();feedTimer=setInterval(()=>{if(page==='generator')loadFeed()},12000);onlineTimer=setInterval(()=>{refreshOnline();heartbeat()},25000)}
+async function loadAdminData(){if(!state.me?.isAdmin)return;try{const data=await api('/api/admin/data');state.adminData=data;state.onlineCount=Number(data.onlineCount||0);save();if(page==='admin'){const v=document.getElementById('appView');v.innerHTML=adminView();renderTop();bindPage()}}catch(e){toast(e.message==='ADMIN_REQUIRED'?'Нет доступа':'Ошибка загрузки админки')}}
+async function adminApplyLuck(){try{const multiplier=Number(document.getElementById('luckMultiplier').value||1),durationMinutes=Math.floor(Number(document.getElementById('luckDuration').value||60));const data=await api('/api/admin/luck',{method:'POST',body:JSON.stringify({multiplier,durationMinutes})});toast(multiplier>1?`Запущена удача X${multiplier} на ${durationMinutes} мин`:'Удача выключена');state.adminData=state.adminData||{};state.adminData.luck=data.luck;save();await loadAdminData()}catch{toast('Не удалось изменить удачу')}}
+async function adminGrantBalance(){const username=document.getElementById('grantUser')?.value.trim(),amount=Math.floor(Number(document.getElementById('grantAmount')?.value||0));if(!username||amount<1){toast('Укажи игрока и сумму');return}try{const data=await api('/api/admin/balance',{method:'POST',body:JSON.stringify({username,amount})});toast(`Игроку ${username} начислено ${money(data.amount)}`);await loadAdminData()}catch(e){toast(e.message==='PLAYER_NOT_FOUND'?'Игрок не найден':'Не удалось начислить баланс')}}
+async function adminCreatePromo(){
+ const rewardType=document.getElementById('promoRewardType')?.value||'money',code=document.getElementById('promoCode')?.value.trim(),amount=Math.floor(Number(document.getElementById('promoAmount')?.value||0)),rewardMode=document.getElementById('promoRewardMode')?.value||'x',luckValue=Number(document.getElementById('promoLuckValue')?.value||0),durationMinutes=Math.floor(Number(document.getElementById('promoDuration')?.value||0)),maxUses=Math.floor(Number(document.getElementById('promoMaxUses')?.value||0)),expiresMinutes=Math.floor(Number(document.getElementById('promoExpires')?.value||0));
+ if(rewardType==='money'&&amount<1){toast('Укажи сумму промокода');return}if(rewardType==='luck'&&(luckValue<=0||durationMinutes<1)){toast('Укажи бафф и его время');return}
+ try{const data=await api('/api/admin/promo',{method:'POST',body:JSON.stringify({code,rewardType,rewardMode,amount,luckValue,durationMinutes,maxUses,expiresMinutes})});toast(`Промокод создан: ${data.promo.code}`);await loadAdminData()}catch(e){toast(e.message==='PROMO_EXISTS'?'Такой промокод уже существует':'Не удалось создать промокод')}}
+async function adminTogglePromo(id){try{await api('/api/admin/promo/toggle',{method:'POST',body:JSON.stringify({id})});await loadAdminData();toast('Статус промокода изменён')}catch{toast('Не удалось изменить промокод')}}
+function play(kind){if(!state.sound)return;try{const C=window.AudioContext||window.webkitAudioContext;if(!C)return;const c=new C(),o=c.createOscillator(),g=c.createGain(),t=c.currentTime;o.connect(g);g.connect(c.destination);o.type='sine';o.frequency.value=kind==='rare'?780:300;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.04,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+(kind==='rare'?.38:.16));o.start(t);o.stop(t+(kind==='rare'?.42:.2))}catch{}}
+async function share(){if(!current)return toast('Сначала выбей SIM');const text=`${state.me?.username||'Игрок'} выбил ${current.number} — ${money(current.price)} · ${current.rarity} · ${current.pattern}. Nexus Number`;try{if(navigator.share){await navigator.share({title:'Nexus Number',text});return}await navigator.clipboard.writeText(text);toast('Результат скопирован')}catch{toast('Не удалось поделиться')}}
+function toast(msg){const t=document.getElementById('toast');if(!t)return;t.textContent=msg;t.classList.add('show');clearTimeout(window.__toastTimer);window.__toastTimer=setTimeout(()=>t.classList.remove('show'),2200)}
 
 document.querySelectorAll('.nav-btn').forEach(b=>b.addEventListener('click',()=>navigate(b.dataset.page)));
-document.getElementById('menuBtn').addEventListener('click',()=>openMenu(true));
-document.getElementById('closeMenu').addEventListener('click',()=>openMenu(false));
-document.getElementById('menuOverlay').addEventListener('click',e=>{const b=e.target.closest('[data-page]');if(b){openMenu(false);navigate(b.dataset.page);}});
-document.getElementById('themeBtn').addEventListener('click',()=>{state.theme=state.theme==='dark'?'light':'dark';document.documentElement.style.setProperty('--bg',state.theme==='light'?'#d6d9df':'#202126');document.documentElement.style.setProperty('--bg2',state.theme==='light'?'#cdd1d8':'#1a1b20');save();});
-
-if(!current){current={number:'+7 999 000 00 00',digits:[9,9,9,0,0,0,0,0,0,0],rarityKey:'common',rarity:'Обычный',rarityPct:92,oneIn:'1.09 к 1',pattern:'Случайная',type:'random',price:500,chancePct:92};state.current=current;save();}
-navigate('generator');
-window.NEXUS_NUMBER_BOOTED=true;
+document.getElementById('menuBtn').addEventListener('click',()=>openMenu(true));document.getElementById('closeMenu').addEventListener('click',()=>openMenu(false));document.getElementById('menuOverlay').addEventListener('click',e=>{const b=e.target.closest('[data-page],[data-action]');if(!b)return;openMenu(false);if(b.dataset.page)navigate(b.dataset.page);else if(b.dataset.action==='profile')openProfileModal();else if(b.dataset.action==='settings')navigate('settings');else if(b.dataset.action==='admin'){if(state.me?.isAdmin)navigate('admin')}});
+document.querySelector('.mini-title')?.addEventListener('click',()=>{if(state.me?.isAdmin)navigate('admin')});
+document.getElementById('themeBtn').addEventListener('click',()=>{state.theme=state.theme==='dark'?'light':'dark';document.documentElement.style.setProperty('--bg',state.theme==='light'?'#d7dae0':'#1e2026');document.documentElement.style.setProperty('--bg2',state.theme==='light'?'#cdd1d8':'#17191e');save()});
+if(!current){current={number:'+7 999 000 00 00',rarityKey:'common',rarity:'Обычный',rarityPct:65,oneIn:'1 к 1,54',pattern:'Случайная',price:1000};state.current=current;save()}
+(async()=>{await refreshMe();navigate('generator');startLive();renderTop();window.NEXUS_NUMBER_BOOTED=true})();
 })();
