@@ -3,114 +3,147 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b1020">
-<meta name="description" content="Nexus Number — игра, где игроки соревнуются, кто выбьет самый редкий и дорогой номер.">
-<title>Nexus Number — Number Hunt</title>
+<meta name="theme-color" content="#171a20">
+<meta name="description" content="Nexus Number — генератор редких игровых мобильных номеров.">
+<title>Nexus Number — Генератор номеров</title>
 <link rel="stylesheet" href="./styles.css">
 </head>
 <body>
 <div class="app-shell">
   <header class="topbar">
+    <button class="back-btn" aria-label="Меню" id="menuBtn">‹</button>
     <div class="brand">
-      <div class="brand-icon">№</div>
-      <div><strong>Nexus Number</strong><span>Охота за редким номером</span></div>
+      <div class="brand-mark">N</div>
+      <div><strong>NEXUS NUMBER</strong><span>Генератор редких номеров</span></div>
     </div>
-    <button id="themeBtn" class="icon-btn" aria-label="Тема">☼</button>
+    <button id="themeBtn" class="icon-btn" aria-label="Тема">◐</button>
   </header>
 
   <main class="content">
-    <section class="hero">
+    <section class="home-head">
       <div>
-        <span class="eyebrow">NUMBER HUNT</span>
-        <h1>Выбей номер дороже всех</h1>
-        <p>Генерируй демонстрационные номера, собирай редкие комбинации и поднимайся в рейтинге.</p>
+        <span class="eyebrow">ГЕНЕРАТОР</span>
+        <h1>Охота за идеальной комбинацией</h1>
+        <p>Генерируй игровые мобильные номера, находи редкие паттерны и попадай в топ по стоимости.</p>
       </div>
-      <div class="hero-score">
-        <span>Лучший</span>
-        <b id="bestScore">0 ₽</b>
+      <div class="level-box">
+        <span>УРОВЕНЬ</span><b id="level">1</b>
       </div>
     </section>
 
-    <section class="game-card">
-      <div class="game-top">
-        <div>
-          <span class="label">Твой номер</span>
-          <div id="countryLabel" class="country">Россия · +7</div>
-        </div>
-        <select id="countrySelect" class="select">
+    <section class="generator card">
+      <div class="section-head">
+        <div><span class="label">Текущий дроп</span><h2>Твой номер</h2></div>
+        <select id="countrySelect" class="select" aria-label="Страна">
           <option value="ru">Россия · +7</option>
+          <option value="kz">Казахстан · +7</option>
+          <option value="ua">Украина · +380</option>
+          <option value="by">Беларусь · +375</option>
           <option value="us">США · +1</option>
           <option value="uk">Великобритания · +44</option>
           <option value="de">Германия · +49</option>
-          <option value="fr">Франция · +33</option>
         </select>
       </div>
 
-      <div class="number-panel">
-        <div id="numberDisplay" class="number">+7 (900) 123-45-67</div>
-        <div class="rarity-row">
-          <span id="rarityBadge" class="rarity">Обычный</span>
-          <span id="patternText">Без особой комбинации</span>
+      <div class="number-stage" id="numberStage">
+        <div class="shine"></div>
+        <div class="plate">
+          <div class="plate-main">
+            <span class="prefix" id="prefix">+7</span>
+            <span id="numberDisplay" class="number">900 123 45 67</span>
+          </div>
+          <div class="plate-sub" id="regionLabel">RU · MOBILE</div>
         </div>
-        <div class="price"><span>Игровая стоимость</span><b id="priceValue">100 ₽</b></div>
+        <div class="drop-meta">
+          <span id="rarityBadge" class="rarity common">ОБЫЧНЫЙ</span>
+          <span id="patternText">Случайная комбинация</span>
+        </div>
+        <div class="price-line">
+          <div><small>ИГРОВАЯ СТОИМОСТЬ</small><strong id="priceValue">100 ₽</strong></div>
+          <div class="price-rank" id="priceRank">#—</div>
+        </div>
       </div>
 
-      <div class="action-row">
-        <button id="generateBtn" class="primary">🎲 Выбить номер</button>
-        <button id="shareBtn" class="secondary">↗ Поделиться</button>
+      <button id="generateBtn" class="generate-btn"><span>СГЕНЕРИРОВАТЬ НОМЕР</span><b>→</b></button>
+      <button id="shareBtn" class="share-btn">Поделиться результатом</button>
+      <p class="notice">Номера вымышленные и используются только внутри игры. Это не выдача SIM-карт и не стоимость реального номера.</p>
+    </section>
+
+    <section class="stats-grid">
+      <div class="stat-card"><span>ЛУЧШИЙ НОМЕР</span><b id="bestScore">0 ₽</b><small>личный рекорд</small></div>
+      <div class="stat-card"><span>ГЕНЕРАЦИЙ</span><b id="attempts">0</b><small>всего попыток</small></div>
+      <div class="stat-card"><span>РЕДКИХ</span><b id="rareCount">0</b><small>от 10 000 ₽</small></div>
+      <div class="stat-card"><span>СЕРИЯ</span><b id="streak">0</b><small>дорогих подряд</small></div>
+    </section>
+
+    <section class="card modes">
+      <div class="section-head"><div><span class="label">Генерация</span><h2>Тип комбинации</h2></div></div>
+      <div class="mode-grid">
+        <button class="mode active" data-mode="mixed"><b>Случайный</b><small>любой паттерн</small></button>
+        <button class="mode" data-mode="repeat"><b>Повторы</b><small>7777 · 8888</small></button>
+        <button class="mode" data-mode="mirror"><b>Зеркальный</b><small>1234 4321</small></button>
+        <button class="mode" data-mode="stairs"><b>Лесенка</b><small>1234 5678</small></button>
+        <button class="mode" data-mode="blocks"><b>Блоки</b><small>111 222 33</small></button>
+        <button class="mode" data-mode="lucky"><b>Джекпот</b><small>макс. редкость</small></button>
       </div>
-      <div class="notice">Все номера и цены в игре демонстрационные. Это игровая оценка редкости, а не стоимость реального номера.</div>
     </section>
 
-    <section class="mini-grid">
-      <div class="stat-card"><span>Сегодня</span><b id="todayBest">0 ₽</b><small>твой рекорд</small></div>
-      <div class="stat-card"><span>Попытки</span><b id="attempts">0</b><small>сгенерировано</small></div>
-      <div class="stat-card"><span>Редкий</span><b id="rareCount">0</b><small>от 10 000 ₽</small></div>
-    </section>
-
-    <section class="card">
+    <section class="card catalog">
       <div class="section-head">
-        <div><span class="label">Стиль охоты</span><h2>Режим генерации</h2></div>
+        <div><span class="label">Коллекция</span><h2>Каталог комбинаций</h2></div>
+        <span class="count" id="catalogCount">0 вариантов</span>
       </div>
-      <div class="chips">
-        <button class="chip active" data-mode="mixed">Обычный</button>
-        <button class="chip" data-mode="beautiful">Красивый</button>
-        <button class="chip" data-mode="repeat">Повторы</button>
-        <button class="chip" data-mode="stairs">Лесенка</button>
-        <button class="chip" data-mode="mirror">Зеркальный</button>
+      <div class="catalog-controls">
+        <input id="catalogSearch" placeholder="Поиск паттерна или цифр" autocomplete="off">
+        <select id="sortCatalog">
+          <option value="price-desc">Сначала дорогие</option>
+          <option value="price-asc">Сначала дешёвые</option>
+          <option value="rarity">По редкости</option>
+        </select>
       </div>
+      <div id="catalogList" class="catalog-grid"></div>
     </section>
 
     <section class="card leaderboard">
       <div class="section-head">
-        <div><span class="label">Соревнование</span><h2>Топ игроков</h2></div>
+        <div><span class="label">Соревнование</span><h2>Лидерборд</h2></div>
         <button id="refreshLeaderboard" class="text-btn">Обновить</button>
+      </div>
+      <div class="leader-tabs">
+        <button class="leader-tab active" data-board="price">Самый дорогой</button>
+        <button class="leader-tab" data-board="count">Больше генераций</button>
       </div>
       <div id="leaderboardList" class="leaderboard-list"></div>
       <div class="submit-row">
         <input id="nickname" maxlength="16" placeholder="Твой ник" autocomplete="off">
         <button id="submitScore" class="secondary">В рейтинг</button>
       </div>
-      <small id="leaderboardStatus" class="muted">Первый запуск использует локальные данные; после подключения Worker появится общий рейтинг.</small>
+      <small id="leaderboardStatus" class="muted">Локальный рейтинг работает сразу. Worker подключается отдельно.</small>
     </section>
 
-    <section class="history card">
+    <section class="card history">
       <div class="section-head">
-        <div><span class="label">Коллекция</span><h2>Последние номера</h2></div>
+        <div><span class="label">История</span><h2>Последние номера</h2></div>
         <button id="clearHistory" class="text-btn">Очистить</button>
       </div>
       <div id="historyList" class="list"></div>
     </section>
 
-    <section class="ad-slot">
-      <b>Рекламное место</b>
-      <span>Здесь позже подключаем рекламный блок.</span>
+    <section class="card achievements">
+      <div class="section-head"><div><span class="label">Прогресс</span><h2>Достижения</h2></div></div>
+      <div id="achievementList" class="achievement-grid"></div>
     </section>
   </main>
 
-  <footer class="footer"><span>Nexus Number V2</span><span>Demo number game</span></footer>
-</div>
+  <nav class="bottom-nav">
+    <button class="nav-item active" data-scroll="generator"><b>Генератор</b><span>Номер</span></button>
+    <button class="nav-item" data-scroll="catalog"><b>Каталог</b><span>Редкости</span></button>
+    <button class="nav-item" data-scroll="leaderboard"><b>Рейтинг</b><span>Топ игроков</span></button>
+    <button class="nav-item" data-scroll="history"><b>Коллекция</b><span>История</span></button>
+  </nav>
 
+  <footer class="footer"><span>NEXUS NUMBER V3</span><span>Игровой генератор</span></footer>
+</div>
 <script src="./game.js"></script>
 </body>
 </html>
