@@ -1,149 +1,96 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#171a20">
-<meta name="description" content="Nexus Number — генератор редких игровых мобильных номеров.">
-<title>Nexus Number — Генератор номеров</title>
-<link rel="stylesheet" href="./styles.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#24262d">
+  <meta name="description" content="Nexus Number — игра-генератор редких мобильных номеров.">
+  <title>Nexus Number — Mobile Number Hunt</title>
+  <style>
+*{box-sizing:border-box}
+:root{
+  --bg:#24252b;--bg2:#1c1d22;--panel:#383b44;--panel2:#30333b;--panel3:#454951;
+  --line:#ffffff18;--line2:#00000055;--text:#f5f6f8;--muted:#a8abb5;--dim:#777b86;
+  --blue:#4e9cff;--blue2:#8bc2ff;--green:#54c889;--gold:#ffcc63;--purple:#c47cff;--pink:#ff72ab;
+  --shadow:0 12px 28px #0007, inset 0 1px #fff2, inset 0 -3px #0007;
+  --shadow-soft:0 7px 18px #0005, inset 0 1px #fff2, inset 0 -2px #0006;
+}
+body.light{--bg:#d7d9dd;--bg2:#cfd1d5;--panel:#eceef1;--panel2:#d9dce1;--panel3:#f4f5f6;--line:#00000018;--line2:#0002;--text:#202328;--muted:#626771;--dim:#858a94;--shadow:0 12px 28px #61687533,inset 0 1px #fff,inset 0 -3px #888b9344}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Inter,Arial,sans-serif}
+body{overflow-x:hidden}
+button,input,select{font:inherit}button{border:0;color:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:active{transform:translateY(1px)}
+.hidden{display:none!important}
+.app{min-height:100vh;background:radial-gradient(circle at 50% -15%,#4d95ef24,transparent 28%),linear-gradient(180deg,var(--bg2),var(--bg) 34%,var(--bg2));padding-bottom:84px}
+.topbar{height:68px;padding:11px 14px;display:grid;grid-template-columns:48px 1fr 48px;align-items:center;position:sticky;top:0;z-index:30;background:#202126db;backdrop-filter:blur(14px);border-bottom:1px solid #fff1}
+body.light .topbar{background:#dfe1e5db}
+.round-btn{width:42px;height:42px;border-radius:12px;background:linear-gradient(180deg,var(--panel3),var(--panel2));box-shadow:var(--shadow-soft);color:var(--text);display:grid;place-items:center;border:1px solid #fff2}
+.hamb{display:grid;gap:4px}.hamb i{width:17px;height:2px;background:currentColor;border-radius:2px;display:block}
+.title-wrap{text-align:center}.mini-title{font-size:9px;letter-spacing:.18em;font-weight:900;color:var(--blue2)}.page-title{font-size:18px;font-weight:900;margin-top:2px}
+.view{width:min(680px,94vw);margin:0 auto;padding:14px 0 22px}
+.hero-head{display:flex;justify-content:space-between;align-items:end;gap:10px;padding:4px 2px 12px}.hero-head h1{font-size:31px;line-height:1.03;margin:3px 0 0}.hero-head p{margin:6px 0 0;color:var(--muted);font-size:12px;line-height:1.35}.eyebrow,.micro{font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);font-weight:900}.best-pill{padding:9px 10px;border-radius:12px;background:linear-gradient(180deg,var(--panel3),var(--panel2));box-shadow:var(--shadow-soft);min-width:112px;text-align:right}.best-pill span{font-size:9px;color:var(--muted);display:block}.best-pill b{display:block;font-size:16px;margin-top:3px}
+.gloss-card{background:linear-gradient(180deg,var(--panel3),var(--panel));border:1px solid #fff2;border-radius:18px;box-shadow:var(--shadow);position:relative;overflow:hidden}.gloss-card:before{content:"";position:absolute;inset:1px 1px 52% 1px;border-radius:17px 17px 0 0;background:linear-gradient(180deg,#fff3,transparent);pointer-events:none}
+.generator-card{padding:12px}.country-row{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:4px 4px 10px}.country-badge{display:flex;align-items:center;gap:8px;font-weight:800}.flag{width:34px;height:23px;border-radius:6px;background:linear-gradient(#fff 0 33%,#1c53a3 33% 66%,#d52d35 66%);border:1px solid #fff5;box-shadow:0 2px 5px #0004}.country-select{max-width:180px;padding:9px 10px;border-radius:10px;background:var(--panel2);border:1px solid #fff2;box-shadow:inset 0 1px #fff2;color:var(--text)}
+.phone-stage{margin:7px 3px 0;min-height:230px;padding:26px 12px 20px;border-radius:15px;background:radial-gradient(circle at 50% 22%,#4f9eff35,transparent 34%),linear-gradient(180deg,#202126,#17181c);border:1px solid #ffffff12;box-shadow:inset 0 1px #fff1,inset 0 -5px #0006,0 8px 18px #0005;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.phone-label{font-size:9px;letter-spacing:.2em;color:#8290a7;font-weight:900}.mobile-card{width:min(560px,100%);padding:15px 13px 13px;border-radius:13px;background:linear-gradient(135deg,#e9edf3,#9da4af 48%,#e8ebef 100%);border:2px solid #d6dae0;box-shadow:0 7px 16px #0008,inset 0 1px #fff,inset 0 -3px #6c717b;color:#17191d;position:relative}.mobile-card:after{content:"";position:absolute;inset:4px;border:1px solid #0003;border-radius:9px;pointer-events:none}.mobile-topline{display:flex;justify-content:space-between;align-items:center;font-size:8px;color:#4f5660;font-weight:900;padding:0 7px 9px;letter-spacing:.08em}.mobile-main{display:grid;grid-template-columns:auto 1fr auto;align-items:end;gap:10px;position:relative;z-index:1}.mobile-country{font-size:10px;font-weight:900;writing-mode:vertical-rl;transform:rotate(180deg);color:#626872}.mobile-number{font-size:clamp(26px,7.4vw,48px);letter-spacing:.045em;font-weight:1000;line-height:1;white-space:nowrap;text-align:center;text-shadow:0 1px #fff6}.mobile-mark{width:45px;height:45px;border-radius:8px;background:linear-gradient(145deg,#0e67cb,#0b3b83);color:#fff;display:grid;place-items:center;font-weight:1000;font-size:15px;box-shadow:inset 0 1px #fff4,inset 0 -3px #04275a,0 2px 5px #0005}.mobile-bottom{display:flex;justify-content:space-between;align-items:center;padding:9px 7px 0;color:#59606a;font-size:9px;letter-spacing:.05em;position:relative;z-index:1}.number-skeleton{height:48px;border-radius:8px;background:linear-gradient(90deg,#c9cdd3,#eef0f2,#c9cdd3);background-size:220% 100%;animation:shine 1s linear infinite}
+@keyframes shine{to{background-position:-220% 0}}.rolling .mobile-card{animation:pulse .72s ease-in-out infinite alternate}.rolling .mobile-number{filter:blur(.55px)}@keyframes pulse{to{transform:scale(1.015);box-shadow:0 10px 20px #0009,inset 0 1px #fff,inset 0 -3px #6c717b}}
+.rarity-bar{display:grid;grid-template-columns:1fr auto;gap:10px;align-items:end;margin-top:14px;padding:0 4px}.pattern{font-size:12px;color:var(--muted)}.rarity-tag{justify-self:end;padding:7px 10px;border-radius:8px;font-size:10px;font-weight:1000;background:#fff1;border:1px solid #fff2}.rarity-common{color:#d9dbe0}.rarity-uncommon{color:#72d4ff;background:#308fdb22}.rarity-rare{color:#55a0ff;background:#2b6bd322}.rarity-epic{color:#c27dff;background:#8b45d622}.rarity-legendary{color:#ffd86a;background:#d29d271f}.rarity-mythic{color:#ff83ba;background:#ff3d981c}.value-row{display:flex;justify-content:space-between;align-items:end;margin-top:10px;padding:0 4px}.value-row span{font-size:10px;color:var(--muted)}.value-row b{font-size:27px;line-height:1}
+.action-stack{margin-top:13px;display:grid;gap:9px}.main-action,.sub-action{width:100%;border-radius:13px;font-weight:1000;letter-spacing:.03em;padding:14px 16px;box-shadow:var(--shadow-soft);border:1px solid #fff2}.main-action{background:linear-gradient(180deg,#5ba4ff,#2876da);font-size:17px;text-shadow:0 1px #0005}.main-action .small{display:block;font-size:9px;opacity:.82;font-weight:800;letter-spacing:.14em;margin-top:3px}.main-action:disabled{opacity:.65;cursor:wait}.sub-row{display:grid;grid-template-columns:1fr 1fr;gap:9px}.sub-action{background:linear-gradient(180deg,var(--panel3),var(--panel2));font-size:12px}
+.stats-strip{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:11px}.stat-box{padding:11px 10px;border-radius:12px;background:linear-gradient(180deg,var(--panel3),var(--panel2));box-shadow:var(--shadow-soft);border:1px solid #fff1;text-align:center}.stat-box span{display:block;font-size:9px;color:var(--muted)}.stat-box b{display:block;font-size:16px;margin-top:4px}
+.section-card{margin-top:11px;padding:13px;border-radius:15px;background:linear-gradient(180deg,var(--panel3),var(--panel));box-shadow:var(--shadow-soft);border:1px solid #fff2}.section-title{display:flex;justify-content:space-between;align-items:center;gap:8px}.section-title h2{margin:0;font-size:17px}.muted{color:var(--muted);font-size:11px}.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}.chip{padding:9px 11px;border-radius:9px;background:var(--panel2);border:1px solid #fff2;box-shadow:inset 0 1px #fff2,0 2px 5px #0004;color:var(--muted);font-weight:900;font-size:11px}.chip.active{background:linear-gradient(180deg,#73b2ff,#367fcf);color:#fff;border-color:#a7d1ff44;box-shadow:inset 0 1px #fff4,0 4px 8px #0005}
+.mini-list{display:grid;gap:7px;margin-top:10px}.list-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:8px;padding:10px;border-radius:10px;background:var(--panel2);border:1px solid #fff1}.list-row strong{font-size:12px}.list-row small{display:block;color:var(--muted);font-size:9px;margin-top:3px}.list-row b{font-size:12px}.view-head{padding:5px 2px 10px}.view-head h1{font-size:28px;margin:3px 0}.view-head p{margin:0;color:var(--muted);font-size:11px;line-height:1.45}
+.filters{display:grid;grid-template-columns:1.1fr 1fr 1fr;gap:7px;margin-top:10px}.field{min-width:0;background:var(--panel2);border:1px solid #fff2;border-radius:10px;padding:9px 10px;color:var(--text);outline:none}.field::placeholder{color:var(--dim)}.range-row{display:grid;grid-template-columns:1fr 1fr;gap:7px;margin-top:7px}.sort-row{display:flex;gap:7px;margin-top:7px}.sort-row .chip{flex:1}.catalog-grid{display:grid;gap:8px;margin-top:10px}.catalog-item{display:grid;grid-template-columns:80px 1fr auto;gap:10px;align-items:center;padding:9px;border-radius:11px;background:linear-gradient(180deg,var(--panel3),var(--panel2));border:1px solid #fff2;box-shadow:var(--shadow-soft)}.catalog-preview{height:44px;border-radius:8px;background:linear-gradient(145deg,#e8ebef,#a8afb9 50%,#e8ebef);display:grid;place-items:center;color:#181a1e;font-size:11px;font-weight:1000;white-space:nowrap;overflow:hidden}.catalog-item strong{font-size:12px}.catalog-item small{display:block;color:var(--muted);font-size:9px;margin-top:4px}.catalog-price{text-align:right}.catalog-price b{font-size:12px;display:block}.catalog-price button{margin-top:5px;padding:7px 8px;border-radius:8px;background:#2c7bd8;color:#fff;font-size:9px;font-weight:900}
+.collection-empty{padding:35px 15px;text-align:center;color:var(--muted);background:var(--panel2);border-radius:12px;border:1px dashed #fff2}.collection-grid{display:grid;gap:8px;margin-top:10px}.collection-card{display:grid;grid-template-columns:1fr auto;gap:8px;align-items:center;padding:10px;border-radius:11px;background:linear-gradient(180deg,var(--panel3),var(--panel2));border:1px solid #fff2}.collection-card b{font-size:12px}.collection-card small{display:block;color:var(--muted);font-size:9px;margin-top:3px}.collection-card .price{font-size:12px;font-weight:1000}
+.leaderboard{display:grid;gap:7px;margin-top:9px}.rank-card{display:grid;grid-template-columns:42px 1fr auto;gap:8px;align-items:center;padding:11px 10px;border-radius:11px;background:linear-gradient(180deg,var(--panel3),var(--panel2));border:1px solid #fff2}.rank-num{font-size:15px;font-weight:1000;color:var(--muted);text-align:center}.rank-card.top .rank-num{color:var(--gold)}.rank-card strong{font-size:12px}.rank-card small{display:block;color:var(--muted);font-size:9px;margin-top:3px}.rank-value{font-weight:1000;font-size:12px;text-align:right}.leader-tools{display:grid;grid-template-columns:1fr auto;gap:7px;margin-top:10px}.leader-tools input{min-width:0}.primary-small{background:#2c7bd8;color:#fff;border-radius:10px;padding:9px 12px;font-size:10px;font-weight:1000}
+.progress{height:9px;border-radius:999px;background:#15171b;border:1px solid #fff1;overflow:hidden;box-shadow:inset 0 2px 3px #0006}.progress i{display:block;height:100%;border-radius:inherit;background:linear-gradient(90deg,#54c889,#70a9ff)}.two-stat{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:9px}.big-stat{padding:14px 12px;border-radius:12px;background:linear-gradient(180deg,var(--panel3),var(--panel2));border:1px solid #fff2;box-shadow:var(--shadow-soft)}.big-stat span{font-size:9px;color:var(--muted)}.big-stat b{display:block;font-size:22px;margin-top:5px}.metric{display:grid;grid-template-columns:120px 1fr 38px;gap:8px;align-items:center;padding:8px 0;border-bottom:1px solid #fff1}.metric:last-child{border-bottom:0}.metric span{font-size:10px;color:var(--muted)}.metric b{font-size:10px;text-align:right}
+.setting-list{display:grid;gap:8px;margin-top:9px}.setting-row{display:grid;grid-template-columns:1fr auto;align-items:center;gap:10px;padding:12px;border-radius:11px;background:linear-gradient(180deg,var(--panel3),var(--panel2));border:1px solid #fff2}.setting-row strong{font-size:12px}.setting-row small{display:block;color:var(--muted);font-size:9px;margin-top:3px}.setting-control{background:var(--panel2);border:1px solid #fff2;border-radius:9px;padding:8px;color:var(--text)}.toggle{width:44px;height:24px;border-radius:999px;background:#1a1c21;box-shadow:inset 0 2px 4px #0007;position:relative}.toggle i{position:absolute;width:18px;height:18px;border-radius:50%;left:3px;top:3px;background:#9398a1;transition:.2s}.toggle.on{background:#2d7edb}.toggle.on i{left:23px;background:white}
+.overlay{position:fixed;inset:0;z-index:100;background:#0009;backdrop-filter:blur(5px);display:flex;align-items:flex-end}.menu-sheet{width:min(680px,100%);margin:0 auto;background:linear-gradient(180deg,#34363e,#26272d);border:1px solid #fff2;border-radius:22px 22px 0 0;padding:15px 14px calc(20px + env(safe-area-inset-bottom));box-shadow:0 -18px 45px #000a}.sheet-head{display:flex;justify-content:space-between;align-items:center}.sheet-head h2{margin:2px 0 0;font-size:23px}.close-btn{width:39px;height:39px;border-radius:11px;background:var(--panel2);font-size:24px;box-shadow:var(--shadow-soft)}.menu-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}.menu-tile{text-align:left;min-height:126px;padding:12px;border-radius:13px;background:linear-gradient(180deg,#4a4d56,#30323a);border:1px solid #fff2;box-shadow:var(--shadow-soft);position:relative;overflow:hidden}.menu-tile:before{content:"";position:absolute;inset:0;background:linear-gradient(135deg,#4c9eff2c,transparent 38%);pointer-events:none}.menu-tile b,.menu-tile span,.tile-preview{display:block;position:relative;z-index:1}.menu-tile b{font-size:12px}.menu-tile span{font-size:9px;color:#bfc2c9;margin-top:5px;line-height:1.3}.tile-preview{margin-top:13px;color:#1b1d22;background:linear-gradient(180deg,#f3f5f7,#afb5bd);border-radius:7px;padding:7px 6px;font-size:10px;font-weight:1000;white-space:nowrap;overflow:hidden}.tile-preview.compact{background:linear-gradient(180deg,#6da6ee,#2d62a5);color:white}.menu-note{font-size:9px;color:var(--muted);line-height:1.35;margin-top:11px;text-align:center}.modal{position:fixed;inset:0;z-index:110;background:#0009;backdrop-filter:blur(5px);display:grid;place-items:center;padding:14px}.modal-card{width:min(520px,100%);max-height:90vh;overflow:auto;border-radius:18px;background:linear-gradient(180deg,#42454e,#292a30);border:1px solid #fff2;box-shadow:0 22px 60px #000b;padding:14px}.modal-head{display:flex;justify-content:space-between;align-items:center}.modal-head h2{margin:0;font-size:20px}.modal-grid{display:grid;gap:8px;margin-top:12px}.modal-row{padding:11px;border-radius:11px;background:#fff1;border:1px solid #fff1}.modal-row label{display:block;font-size:9px;color:var(--muted);margin-bottom:7px;text-transform:uppercase;letter-spacing:.1em}.modal-row select{width:100%;padding:10px;border-radius:9px;background:#25272c;color:white;border:1px solid #fff2}.modal-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px}
+.bottom-nav{position:fixed;z-index:40;left:50%;bottom:0;transform:translateX(-50%);width:min(680px,100%);padding:7px 8px calc(7px + env(safe-area-inset-bottom));display:grid;grid-template-columns:repeat(5,1fr);gap:5px;background:#212227ef;backdrop-filter:blur(16px);border-top:1px solid #fff2}.nav-btn{min-width:0;padding:7px 2px 6px;border-radius:10px;background:transparent;color:#8e929c;font-size:8px;font-weight:900}.nav-icon{display:grid;place-items:center;width:24px;height:24px;margin:0 auto 3px;border-radius:8px;background:#363941;font-size:11px}.nav-btn.active{color:white;background:#ffffff0c}.nav-btn.active .nav-icon{background:#347ed4;color:#fff;box-shadow:0 4px 10px #0005}
+.toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%) translateY(8px);padding:10px 13px;border-radius:10px;background:#121419ef;color:#fff;font-size:11px;font-weight:900;opacity:0;pointer-events:none;transition:.2s;z-index:150;white-space:nowrap;border:1px solid #fff2}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media(min-width:700px){.view{padding-top:22px}.mobile-number{font-size:48px}.phone-stage{min-height:275px}.menu-grid{grid-template-columns:repeat(3,1fr)}}
+@media(max-width:430px){.filters{grid-template-columns:1fr}.hero-head{align-items:start}.best-pill{min-width:102px}.mobile-main{grid-template-columns:24px 1fr 42px;gap:7px}.mobile-number{font-size:24px}.phone-stage{min-height:215px}.stats-strip{grid-template-columns:repeat(3,1fr)}.stat-box b{font-size:14px}.menu-tile{min-height:118px}}
+
+  </style>
 </head>
 <body>
-<div class="app-shell">
-  <header class="topbar">
-    <button class="back-btn" aria-label="Меню" id="menuBtn">‹</button>
-    <div class="brand">
-      <div class="brand-mark">N</div>
-      <div><strong>NEXUS NUMBER</strong><span>Генератор редких номеров</span></div>
+  <div class="app">
+    <header class="topbar">
+      <button id="menuBtn" class="round-btn" aria-label="Меню"><span class="hamb"><i></i><i></i><i></i></span></button>
+      <div class="title-wrap">
+        <div class="mini-title">NEXUS NUMBER</div>
+        <div class="page-title" id="pageTitle">Генератор</div>
+      </div>
+      <button id="themeBtn" class="round-btn" aria-label="Переключить тему">◐</button>
+    </header>
+
+    <main id="appView" class="view"></main>
+
+    <nav class="bottom-nav" aria-label="Навигация">
+      <button class="nav-btn active" data-page="generator"><span class="nav-icon">N</span><span>Генератор</span></button>
+      <button class="nav-btn" data-page="catalog"><span class="nav-icon">▦</span><span>Каталог</span></button>
+      <button class="nav-btn" data-page="collection"><span class="nav-icon">◇</span><span>Коллекция</span></button>
+      <button class="nav-btn" data-page="rating"><span class="nav-icon">★</span><span>Рейтинг</span></button>
+      <button class="nav-btn" data-page="stats"><span class="nav-icon">◒</span><span>Стата</span></button>
+    </nav>
+
+    <div id="menuOverlay" class="overlay hidden" aria-hidden="true">
+      <div class="menu-sheet">
+        <div class="sheet-head"><div><span class="micro">NEXUS MENU</span><h2>Разделы</h2></div><button id="closeMenu" class="close-btn">×</button></div>
+        <div class="menu-grid">
+          <button class="menu-tile" data-page="generator"><b>ГЕНЕРАТОР</b><span>Выбить новый номер</span><em class="tile-preview">+7 999 777 77 77</em></button>
+          <button class="menu-tile" data-page="catalog"><b>КАТАЛОГ</b><span>Редкие комбинации и цены</span><em class="tile-preview compact">777 · 001 · 123</em></button>
+          <button class="menu-tile" data-page="collection"><b>КОЛЛЕКЦИЯ</b><span>Твои выбитые номера</span><em class="tile-preview">12 / 100</em></button>
+          <button class="menu-tile" data-page="rating"><b>ЛИДЕРБОРД</b><span>Самые дорогие номера</span><em class="tile-preview">#1 48 700 000 ₽</em></button>
+          <button class="menu-tile" data-page="stats"><b>СТАТИСТИКА</b><span>Твои результаты и редкость</span><em class="tile-preview">8 421 генераций</em></button>
+          <button class="menu-tile" data-page="settings"><b>НАСТРОЙКИ</b><span>Страна, стиль, звук</span><em class="tile-preview">Россия · +7</em></button>
+        </div>
+        <div class="menu-note">Рекламного блока здесь нет. Все номера в игре — демонстрационные комбинации.</div>
+      </div>
     </div>
-    <button id="themeBtn" class="icon-btn" aria-label="Тема">◐</button>
-  </header>
 
-  <main class="content">
-    <section class="home-head">
-      <div>
-        <span class="eyebrow">ГЕНЕРАТОР</span>
-        <h1>Охота за идеальной комбинацией</h1>
-        <p>Генерируй игровые мобильные номера, находи редкие паттерны и попадай в топ по стоимости.</p>
-      </div>
-      <div class="level-box">
-        <span>УРОВЕНЬ</span><b id="level">1</b>
-      </div>
-    </section>
+    <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  </div>
 
-    <section class="generator card">
-      <div class="section-head">
-        <div><span class="label">Текущий дроп</span><h2>Твой номер</h2></div>
-        <select id="countrySelect" class="select" aria-label="Страна">
-          <option value="ru">Россия · +7</option>
-          <option value="kz">Казахстан · +7</option>
-          <option value="ua">Украина · +380</option>
-          <option value="by">Беларусь · +375</option>
-          <option value="us">США · +1</option>
-          <option value="uk">Великобритания · +44</option>
-          <option value="de">Германия · +49</option>
-        </select>
-      </div>
-
-      <div class="number-stage" id="numberStage">
-        <div class="shine"></div>
-        <div class="plate">
-          <div class="plate-main">
-            <span class="prefix" id="prefix">+7</span>
-            <span id="numberDisplay" class="number">900 123 45 67</span>
-          </div>
-          <div class="plate-sub" id="regionLabel">RU · MOBILE</div>
-        </div>
-        <div class="drop-meta">
-          <span id="rarityBadge" class="rarity common">ОБЫЧНЫЙ</span>
-          <span id="patternText">Случайная комбинация</span>
-        </div>
-        <div class="price-line">
-          <div><small>ИГРОВАЯ СТОИМОСТЬ</small><strong id="priceValue">100 ₽</strong></div>
-          <div class="price-rank" id="priceRank">#—</div>
-        </div>
-      </div>
-
-      <button id="generateBtn" class="generate-btn"><span>СГЕНЕРИРОВАТЬ НОМЕР</span><b>→</b></button>
-      <button id="shareBtn" class="share-btn">Поделиться результатом</button>
-      <p class="notice">Номера вымышленные и используются только внутри игры. Это не выдача SIM-карт и не стоимость реального номера.</p>
-    </section>
-
-    <section class="stats-grid">
-      <div class="stat-card"><span>ЛУЧШИЙ НОМЕР</span><b id="bestScore">0 ₽</b><small>личный рекорд</small></div>
-      <div class="stat-card"><span>ГЕНЕРАЦИЙ</span><b id="attempts">0</b><small>всего попыток</small></div>
-      <div class="stat-card"><span>РЕДКИХ</span><b id="rareCount">0</b><small>от 10 000 ₽</small></div>
-      <div class="stat-card"><span>СЕРИЯ</span><b id="streak">0</b><small>дорогих подряд</small></div>
-    </section>
-
-    <section class="card modes">
-      <div class="section-head"><div><span class="label">Генерация</span><h2>Тип комбинации</h2></div></div>
-      <div class="mode-grid">
-        <button class="mode active" data-mode="mixed"><b>Случайный</b><small>любой паттерн</small></button>
-        <button class="mode" data-mode="repeat"><b>Повторы</b><small>7777 · 8888</small></button>
-        <button class="mode" data-mode="mirror"><b>Зеркальный</b><small>1234 4321</small></button>
-        <button class="mode" data-mode="stairs"><b>Лесенка</b><small>1234 5678</small></button>
-        <button class="mode" data-mode="blocks"><b>Блоки</b><small>111 222 33</small></button>
-        <button class="mode" data-mode="lucky"><b>Джекпот</b><small>макс. редкость</small></button>
-      </div>
-    </section>
-
-    <section class="card catalog">
-      <div class="section-head">
-        <div><span class="label">Коллекция</span><h2>Каталог комбинаций</h2></div>
-        <span class="count" id="catalogCount">0 вариантов</span>
-      </div>
-      <div class="catalog-controls">
-        <input id="catalogSearch" placeholder="Поиск паттерна или цифр" autocomplete="off">
-        <select id="sortCatalog">
-          <option value="price-desc">Сначала дорогие</option>
-          <option value="price-asc">Сначала дешёвые</option>
-          <option value="rarity">По редкости</option>
-        </select>
-      </div>
-      <div id="catalogList" class="catalog-grid"></div>
-    </section>
-
-    <section class="card leaderboard">
-      <div class="section-head">
-        <div><span class="label">Соревнование</span><h2>Лидерборд</h2></div>
-        <button id="refreshLeaderboard" class="text-btn">Обновить</button>
-      </div>
-      <div class="leader-tabs">
-        <button class="leader-tab active" data-board="price">Самый дорогой</button>
-        <button class="leader-tab" data-board="count">Больше генераций</button>
-      </div>
-      <div id="leaderboardList" class="leaderboard-list"></div>
-      <div class="submit-row">
-        <input id="nickname" maxlength="16" placeholder="Твой ник" autocomplete="off">
-        <button id="submitScore" class="secondary">В рейтинг</button>
-      </div>
-      <small id="leaderboardStatus" class="muted">Локальный рейтинг работает сразу. Worker подключается отдельно.</small>
-    </section>
-
-    <section class="card history">
-      <div class="section-head">
-        <div><span class="label">История</span><h2>Последние номера</h2></div>
-        <button id="clearHistory" class="text-btn">Очистить</button>
-      </div>
-      <div id="historyList" class="list"></div>
-    </section>
-
-    <section class="card achievements">
-      <div class="section-head"><div><span class="label">Прогресс</span><h2>Достижения</h2></div></div>
-      <div id="achievementList" class="achievement-grid"></div>
-    </section>
-  </main>
-
-  <nav class="bottom-nav">
-    <button class="nav-item active" data-scroll="generator"><b>Генератор</b><span>Номер</span></button>
-    <button class="nav-item" data-scroll="catalog"><b>Каталог</b><span>Редкости</span></button>
-    <button class="nav-item" data-scroll="leaderboard"><b>Рейтинг</b><span>Топ игроков</span></button>
-    <button class="nav-item" data-scroll="history"><b>Коллекция</b><span>История</span></button>
-  </nav>
-
-  <footer class="footer"><span>NEXUS NUMBER V3</span><span>Игровой генератор</span></footer>
-</div>
-<script src="./game.js"></script>
+  <script src="./game.js"></script>
 </body>
 </html>
