@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<meta name="description" content="Nexus Number — игра, где игроки соревнуются, кто выбьет самый редкий и дорогой номер.">
+<title>Nexus Number — Number Hunt</title>
+<link rel="stylesheet" href="./styles.css">
+</head>
+<body>
+<div class="app-shell">
+  <header class="topbar">
+    <div class="brand">
+      <div class="brand-icon">№</div>
+      <div><strong>Nexus Number</strong><span>Охота за редким номером</span></div>
+    </div>
+    <button id="themeBtn" class="icon-btn" aria-label="Тема">☼</button>
+  </header>
+
+  <main class="content">
+    <section class="hero">
+      <div>
+        <span class="eyebrow">NUMBER HUNT</span>
+        <h1>Выбей номер дороже всех</h1>
+        <p>Генерируй демонстрационные номера, собирай редкие комбинации и поднимайся в рейтинге.</p>
+      </div>
+      <div class="hero-score">
+        <span>Лучший</span>
+        <b id="bestScore">0 ₽</b>
+      </div>
+    </section>
+
+    <section class="game-card">
+      <div class="game-top">
+        <div>
+          <span class="label">Твой номер</span>
+          <div id="countryLabel" class="country">Россия · +7</div>
+        </div>
+        <select id="countrySelect" class="select">
+          <option value="ru">Россия · +7</option>
+          <option value="us">США · +1</option>
+          <option value="uk">Великобритания · +44</option>
+          <option value="de">Германия · +49</option>
+          <option value="fr">Франция · +33</option>
+        </select>
+      </div>
+
+      <div class="number-panel">
+        <div id="numberDisplay" class="number">+7 (900) 123-45-67</div>
+        <div class="rarity-row">
+          <span id="rarityBadge" class="rarity">Обычный</span>
+          <span id="patternText">Без особой комбинации</span>
+        </div>
+        <div class="price"><span>Игровая стоимость</span><b id="priceValue">100 ₽</b></div>
+      </div>
+
+      <div class="action-row">
+        <button id="generateBtn" class="primary">🎲 Выбить номер</button>
+        <button id="shareBtn" class="secondary">↗ Поделиться</button>
+      </div>
+      <div class="notice">Все номера и цены в игре демонстрационные. Это игровая оценка редкости, а не стоимость реального номера.</div>
+    </section>
+
+    <section class="mini-grid">
+      <div class="stat-card"><span>Сегодня</span><b id="todayBest">0 ₽</b><small>твой рекорд</small></div>
+      <div class="stat-card"><span>Попытки</span><b id="attempts">0</b><small>сгенерировано</small></div>
+      <div class="stat-card"><span>Редкий</span><b id="rareCount">0</b><small>от 10 000 ₽</small></div>
+    </section>
+
+    <section class="card">
+      <div class="section-head">
+        <div><span class="label">Стиль охоты</span><h2>Режим генерации</h2></div>
+      </div>
+      <div class="chips">
+        <button class="chip active" data-mode="mixed">Обычный</button>
+        <button class="chip" data-mode="beautiful">Красивый</button>
+        <button class="chip" data-mode="repeat">Повторы</button>
+        <button class="chip" data-mode="stairs">Лесенка</button>
+        <button class="chip" data-mode="mirror">Зеркальный</button>
+      </div>
+    </section>
+
+    <section class="card leaderboard">
+      <div class="section-head">
+        <div><span class="label">Соревнование</span><h2>Топ игроков</h2></div>
+        <button id="refreshLeaderboard" class="text-btn">Обновить</button>
+      </div>
+      <div id="leaderboardList" class="leaderboard-list"></div>
+      <div class="submit-row">
+        <input id="nickname" maxlength="16" placeholder="Твой ник" autocomplete="off">
+        <button id="submitScore" class="secondary">В рейтинг</button>
+      </div>
+      <small id="leaderboardStatus" class="muted">Первый запуск использует локальные данные; после подключения Worker появится общий рейтинг.</small>
+    </section>
+
+    <section class="history card">
+      <div class="section-head">
+        <div><span class="label">Коллекция</span><h2>Последние номера</h2></div>
+        <button id="clearHistory" class="text-btn">Очистить</button>
+      </div>
+      <div id="historyList" class="list"></div>
+    </section>
+
+    <section class="ad-slot">
+      <b>Рекламное место</b>
+      <span>Здесь позже подключаем рекламный блок.</span>
+    </section>
+  </main>
+
+  <footer class="footer"><span>Nexus Number V2</span><span>Demo number game</span></footer>
+</div>
+
+<script src="./game.js"></script>
+</body>
+</html>
